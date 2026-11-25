@@ -239,7 +239,10 @@ function renderSlots() {
     .join('');
 }
 
-/* ── 定休日・臨時休業パネル ── */
+/* ── 定休日・臨時休業パネル(カレンダー) ── */
+let calY; // カレンダー表示中の年
+let calM; // カレンダー表示中の月(0-11)
+
 function renderHolidays() {
   const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
   $('weekly-toggles').innerHTML = dayNames
@@ -249,20 +252,11 @@ function renderHolidays() {
     })
     .join('');
 
-  const todayIso = isoOfMid(startOfToday());
-  const upcoming = [...holidayDates].filter((d) => d >= todayIso).sort();
-  $('holiday-list').innerHTML = upcoming.length
-    ? upcoming
-        .map((d) => {
-          const dt = new Date(d + 'T00:00:00');
-          const wd = dayNames[dt.getDay()];
-          const label = `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}(${wd})`;
-          return `<span class="holiday-pill">${label}<button data-hdel="${d}" aria-label="削除">×</button></span>`;
-        })
-        .join('')
-    : '<span class="holiday-empty">臨時休業の予定はありません</span>';
+  renderCalendar();
 
   // 閉じたままでも分かるよう、見出しに現状の要約を表示
+  const todayIso = isoOfMid(startOfToday());
+  const upcoming = [...holidayDates].filter((d) => d >= todayIso).sort();
   const parts = [];
   if (holidayWeekly.size > 0) {
     parts.push(
@@ -275,6 +269,53 @@ function renderHolidays() {
     : '📅 定休日・臨時休業(未設定)';
 }
 
+function renderCalendar() {
+  if (calY === undefined) {
+    const n = new Date();
+    calY = n.getFullYear();
+    calM = n.getMonth();
+  }
+  $('cal-title').textContent = calY + '年' + (calM + 1) + '月';
+
+  const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
+  const first = new Date(calY, calM, 1);
+  const lastDay = new Date(calY, calM + 1, 0).getDate();
+  const todayIso = isoOfMid(startOfToday());
+
+  let html = dayNames.map((d) => `<div class="cal-wd">${d}</div>`).join('');
+  for (let i = 0; i < first.getDay(); i++) html += '<div></div>';
+  for (let d = 1; d <= lastDay; d++) {
+    const dt = new Date(calY, calM, d);
+    const iso = isoOfMid(dt);
+    const past = iso < todayIso;
+    const isDate = holidayDates.has(iso);
+    const isWk = holidayWeekly.has(dt.getDay());
+    const cls = ['cal-day'];
+    if (isDate) cls.push('cal-day--closed');
+    else if (isWk) cls.push('cal-day--weekly');
+    if (iso === todayIso) cls.push('cal-day--today');
+    if (past) cls.push('cal-day--past');
+    html +=
+      `<div class="${cls.join(' ')}"` +
+      (past ? '' : ` data-cal="${iso}"`) +
+      `>${d}</div>`;
+  }
+  $('cal-grid').innerHTML = html;
+}
+
+// カレンダーの日付をタップ → 休業日ON/OFF
+async function toggleDateHoliday(iso) {
+  const action = holidayDates.has(iso)
+    ? 'holiday_remove_date'
+    : 'holiday_add_date';
+  const { ok, data } = await callAction(action, { date: iso });
+  if (!ok) {
+    alert('休業日の変更に失敗しました: ' + (data.error || 'エラー'));
+    return;
+  }
+  refresh();
+}
+
 async function toggleWeekly(day) {
   const set = new Set(holidayWeekly);
   if (set.has(day)) set.delete(day);
@@ -282,30 +323,6 @@ async function toggleWeekly(day) {
   const { ok, data } = await callAction('holiday_set_weekly', { days: [...set] });
   if (!ok) {
     alert('定休日の変更に失敗しました: ' + (data.error || 'エラー'));
-    return;
-  }
-  refresh();
-}
-
-async function addHoliday() {
-  const v = $('holiday-date').value;
-  if (!v) {
-    alert('日付を選んでください');
-    return;
-  }
-  const { ok, data } = await callAction('holiday_add_date', { date: v });
-  if (!ok) {
-    alert('追加に失敗しました: ' + (data.error || 'エラー'));
-    return;
-  }
-  $('holiday-date').value = '';
-  refresh();
-}
-
-async function removeHoliday(dateIso) {
-  const { ok, data } = await callAction('holiday_remove_date', { date: dateIso });
-  if (!ok) {
-    alert('削除に失敗しました: ' + (data.error || 'エラー'));
     return;
   }
   refresh();
@@ -457,15 +474,22 @@ async function toggleSlot(iso) {
 
 /* ── イベント ── */
 document.addEventListener('click', (ev) => {
-  const t = ev.target.closest('[data-confirm],[data-done],[data-slot],[data-wtoggle],[data-hdel]');
+  const t = ev.target.closest(
+    '[data-confirm],[data-done],[data-slot],[data-wtoggle],[data-cal],[data-calnav]'
+  );
   if (!t) return;
   if (t.dataset.confirm) confirmOrder(Number(t.dataset.confirm));
   if (t.dataset.done) setDone(Number(t.dataset.done));
   if (t.dataset.slot) toggleSlot(t.dataset.slot);
   if (t.dataset.wtoggle !== undefined && t.dataset.wtoggle !== '') toggleWeekly(Number(t.dataset.wtoggle));
-  if (t.dataset.hdel) removeHoliday(t.dataset.hdel);
+  if (t.dataset.cal) toggleDateHoliday(t.dataset.cal);
+  if (t.dataset.calnav) {
+    calM += Number(t.dataset.calnav);
+    if (calM < 0) { calM = 11; calY--; }
+    if (calM > 11) { calM = 0; calY++; }
+    renderCalendar();
+  }
 });
-$('add-holiday-btn').addEventListener('click', addHoliday);
 
 $('silence-btn').addEventListener('click', () => {
   stopChime();

@@ -143,12 +143,82 @@ body {
   padding-bottom: 12px;
 }
 
-/* ── 定休日・臨時休業パネルの中身 ── */
+/* ── 定休日カレンダー ── */
 .holiday-row {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
   padding-bottom: 12px;
+}
+.holiday-cal {
+  max-width: 380px;
+}
+.cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.cal-head span {
+  font-weight: 800;
+  font-size: 14px;
+}
+.cal-head button {
+  background: var(--card);
+  border: 1.5px solid var(--line);
+  color: var(--ink);
+  border-radius: 8px;
+  width: 36px;
+  height: 30px;
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.cal-wd {
+  text-align: center;
+  font-size: 11px;
+  color: var(--sub);
+  padding: 2px 0;
+}
+.cal-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--card);
+  border: 1.5px solid var(--line);
+  cursor: pointer;
+  user-select: none;
+}
+.cal-day--closed {
+  background: #4a1f1f;
+  border-color: var(--new);
+  color: #ffb3b3;
+}
+.cal-day--weekly {
+  background: rgba(217, 88, 30, 0.16);
+  border-color: rgba(217, 88, 30, 0.4);
+  color: #f0a880;
+}
+.cal-day--today {
+  border-color: var(--accent);
+}
+.cal-day--past {
+  opacity: 0.35;
+  cursor: default;
+}
+.cal-legend {
+  font-size: 11px;
+  color: var(--sub);
+  margin-top: 8px;
 }
 .holiday-weekly {
   display: flex;
@@ -167,54 +237,6 @@ body {
 .holiday-weekly .chip {
   padding: 6px 12px;
   font-size: 13px;
-}
-.holiday-add {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-#holiday-date {
-  background: #1c1610;
-  color: var(--ink);
-  border: 1.5px solid var(--line);
-  border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 14px;
-  color-scheme: dark;
-}
-.holiday-add .c-btn {
-  padding: 9px 16px;
-}
-.holiday-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.holiday-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: #4a1f1f;
-  border: 1.5px solid var(--new);
-  color: #ffb3b3;
-  border-radius: 999px;
-  padding: 5px 8px 5px 12px;
-  font-size: 13px;
-  font-weight: 700;
-}
-.holiday-pill button {
-  background: none;
-  border: none;
-  color: #ffb3b3;
-  font-size: 15px;
-  cursor: pointer;
-  line-height: 1;
-  padding: 0 4px;
-}
-.holiday-empty {
-  font-size: 13px;
-  color: var(--sub);
 }
 
 /* ── 注文カード ── */
