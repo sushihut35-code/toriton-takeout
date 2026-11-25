@@ -141,8 +141,8 @@ Deno.serve(async (req) => {
     }
 
     // ── 未確認注文の再通知(電話の着信のように、確定するまで訴え続ける) ──
-    // pg_cron から毎分呼ばれる。前回通知から2分以上経った「new」の注文に
-    // ⚠️再通知を送る。注文発生から60分で打ち切り(閉店後の暴走防止)。
+    // pg_cron から毎分呼ばれる。前回通知から1分以上経った「new」の注文に
+    // ⚠️再通知を送る(実質1〜2分間隔)。注文発生から60分で打ち切り。
     case "nag_unconfirmed": {
       const ownerId = Deno.env.get("OWNER_LINE_USER_ID") ?? "";
       const { data: stale } = await db
@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
         const last = o.owner_notified_at
           ? new Date(o.owner_notified_at).getTime()
           : 0;
-        if (Date.now() - last < 2 * 60000) continue;
+        if (Date.now() - last < 60 * 1000) continue;
         const ok = await linePush(
           token,
           ownerId,
