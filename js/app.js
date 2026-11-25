@@ -454,9 +454,35 @@ $('cart-backdrop').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) closeCart();
 });
 
+// ── リピーター対策:前回の注文からお名前・電話番号を自動入力 ──
+// (LINE IDで自分の直近の注文を引いてくる。LINEアカウントが同じなら端末が変わっても効く)
+async function prefillCustomerInfo() {
+  if (!profile.userId) return;
+  if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY || !window.supabase) return;
+  try {
+    const db = window.supabase.createClient(
+      CONFIG.SUPABASE_URL,
+      CONFIG.SUPABASE_ANON_KEY
+    );
+    const { data } = await db
+      .from('takeout_orders')
+      .select('customer_name,phone')
+      .eq('line_user_id', profile.userId)
+      .order('id', { ascending: false })
+      .limit(1);
+    const last = data && data[0];
+    if (last) {
+      if (last.customer_name) $('name-input').value = last.customer_name;
+      if (last.phone) $('phone-input').value = last.phone;
+    }
+  } catch (e) {
+    // 取れなければ空欄のまま(LINEの表示名が入る)
+  }
+}
+
 (async function init() {
   await initLiff();
-  await Promise.all([loadStops(), loadHolidays()]);
+  await Promise.all([loadStops(), loadHolidays(), prefillCustomerInfo()]);
   renderMenu();
   renderSlots();
   refreshCartUI();
