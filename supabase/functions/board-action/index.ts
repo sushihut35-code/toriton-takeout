@@ -245,6 +245,51 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
+    // ── 定休日・臨時休業の管理(ボードから) ──
+    case "holiday_set_weekly": {
+      // 毎週の定休を丸ごと同期する(送られた配列が正)
+      const days = Array.isArray(payload.days)
+        ? [...new Set(payload.days.map(Number))]
+            .filter((n) => Number.isInteger(n) && n >= 0 && n <= 6)
+        : [];
+      await db.from("shop_holidays").delete().eq("kind", "weekly");
+      if (days.length > 0) {
+        const { error } = await db
+          .from("shop_holidays")
+          .insert(days.map((d) => ({ kind: "weekly", day_of_week: d })));
+        if (error) return json({ error: error.message }, 500);
+      }
+      return json({ ok: true });
+    }
+
+    case "holiday_add_date": {
+      const date = String(payload.date ?? "");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return json({ error: "bad date" }, 400);
+      }
+      await db
+        .from("shop_holidays")
+        .delete()
+        .eq("kind", "date")
+        .eq("holiday_date", date);
+      const { error } = await db
+        .from("shop_holidays")
+        .insert({ kind: "date", holiday_date: date });
+      if (error) return json({ error: error.message }, 500);
+      return json({ ok: true });
+    }
+
+    case "holiday_remove_date": {
+      const date = String(payload.date ?? "");
+      const { error } = await db
+        .from("shop_holidays")
+        .delete()
+        .eq("kind", "date")
+        .eq("holiday_date", date);
+      if (error) return json({ error: error.message }, 500);
+      return json({ ok: true });
+    }
+
     // 時間帯ストップ(お客の選択肢から消す)
     case "slot_stop": {
       const slotAt = new Date(payload.slot_at);

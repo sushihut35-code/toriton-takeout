@@ -9,6 +9,8 @@
 const cart = new Map();   // id -> { id, name, price, qty }
 let profile = { displayName: '', userId: '' };
 let stopMinutes = new Set(); // 店が受付停止した時間帯(分単位epoch)
+let holidayWeekly = new Set(); // 毎週の定休(0=日..6=土)
+let holidayDates = new Set(); // 臨時休業('YYYY-MM-DD')
 
 // ── メニュー索引(カート操作用に id → 品目 を引けるようにする) ──
 const ITEM_INDEX = new Map();
@@ -56,15 +58,15 @@ function startOfDay(d) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
-// その日は休みか(毎週の定休 + 臨時休業)
+// その日は休みか(ボードで設定した定休・臨時休業を見る)
 function isHoliday(dateAtMidnight) {
   const day = dateAtMidnight.getDay();
-  if ((CONFIG.WEEKLY_HOLIDAYS || []).includes(day)) return true;
+  if (holidayWeekly.has(day)) return true;
   const iso =
     dateAtMidnight.getFullYear() + '-' +
     String(dateAtMidnight.getMonth() + 1).padStart(2, '0') + '-' +
     String(dateAtMidnight.getDate()).padStart(2, '0');
-  return (CONFIG.HOLIDAYS || []).includes(iso);
+  return holidayDates.has(iso);
 }
 
 function atHM(dateAtMidnight, hm) {
@@ -138,6 +140,33 @@ function slotLabel(d) {
   if (diff === 2) return '明後日 ' + hm;
   const wd = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
   return (d.getMonth() + 1) + '/' + d.getDate() + '(' + wd + ') ' + hm;
+}
+
+// 定休日・臨時休業をSupabaseから読み込む(読めなければconfig.jsの値を予備に使う)
+async function loadHolidays() {
+  if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY || !window.supabase) {
+    holidayWeekly = new Set(CONFIG.WEEKLY_HOLIDAYS || []);
+    holidayDates = new Set(CONFIG.HOLIDAYS || []);
+    return;
+  }
+  try {
+    const db = window.supabase.createClient(
+      CONFIG.SUPABASE_URL,
+      CONFIG.SUPABASE_ANON_KEY
+    );
+    const { data } = await db.from('shop_holidays').select('kind,day_of_week,holiday_date');
+    (data || []).forEach((r) => {
+      if (r.kind === 'weekly' && r.day_of_week != null) {
+        holidayWeekly.add(Number(r.day_of_week));
+      }
+      if (r.kind === 'date' && r.holiday_date) {
+        holidayDates.add(String(r.holiday_date));
+      }
+    });
+  } catch (e) {
+    holidayWeekly = new Set(CONFIG.WEEKLY_HOLIDAYS || []);
+    holidayDates = new Set(CONFIG.HOLIDAYS || []);
+  }
 }
 
 // 店が受付停止した時間帯をSupabaseから読み込む
@@ -427,7 +456,7 @@ $('cart-backdrop').addEventListener('click', (e) => {
 
 (async function init() {
   await initLiff();
-  await loadStops();
+  await Promise.all([loadStops(), loadHolidays()]);
   renderMenu();
   renderSlots();
   refreshCartUI();

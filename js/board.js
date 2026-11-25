@@ -14,6 +14,8 @@ let chiming = false;
 let chimeTimer = null;
 let orders = [];
 let stops = new Set(); // 分単位のepochのセット
+let holidayWeekly = new Set(); // 毎週の定休(0=日..6=土)
+let holidayDates = new Set(); // 臨時休業('YYYY-MM-DD')
 let refreshTimer = null;
 
 const $ = (id) => document.getElementById(id);
@@ -52,15 +54,22 @@ function startOfDayLocal(d) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
-// ── 営業日判定(毎週の定休 + 臨時休業) ──
+// ── 営業日判定(Supabaseの定休日設定を見る) ──
 function isHoliday(mid) {
   const day = mid.getDay();
-  if ((CONFIG.WEEKLY_HOLIDAYS || []).includes(day)) return true;
+  if (holidayWeekly.has(day)) return true;
   const iso =
     mid.getFullYear() + '-' +
     String(mid.getMonth() + 1).padStart(2, '0') + '-' +
     String(mid.getDate()).padStart(2, '0');
-  return (CONFIG.HOLIDAYS || []).includes(iso);
+  return holidayDates.has(iso);
+}
+function isoOfMid(mid) {
+  return (
+    mid.getFullYear() + '-' +
+    String(mid.getMonth() + 1).padStart(2, '0') + '-' +
+    String(mid.getDate()).padStart(2, '0')
+  );
 }
 function atHM(mid, hm) {
   const [h, m] = hm.split(':').map(Number);
@@ -152,13 +161,25 @@ async function callAction(action, payload) {
 /* ── データ取得 ── */
 async function loadAll() {
   const today = startOfToday().toISOString();
-  const [oRes, sRes] = await Promise.all([
+  const [oRes, sRes, hRes] = await Promise.all([
     db.from('takeout_orders').select('*').gte('pickup_at', today).order('pickup_at'),
     db.from('pickup_slot_stops').select('slot_at').gte('slot_at', today),
+    db.from('shop_holidays').select('kind,day_of_week,holiday_date'),
   ]);
   orders = oRes.data || [];
   stops = new Set((sRes.data || []).map((r) => minuteKey(r.slot_at)));
+  holidayWeekly = new Set();
+  holidayDates = new Set();
+  (hRes.data || []).forEach((r) => {
+    if (r.kind === 'weekly' && r.day_of_week != null) {
+      holidayWeekly.add(Number(r.day_of_week));
+    }
+    if (r.kind === 'date' && r.holiday_date) {
+      holidayDates.add(String(r.holiday_date));
+    }
+  });
   renderSlots();
+  renderHolidays();
   renderOrders();
   checkNewArrivals();
 }
@@ -216,6 +237,66 @@ function renderSlots() {
       return `<button class="${cls}" data-slot="${d.toISOString()}" ${past ? 'disabled' : ''}>${hmLabel(d)}</button>`;
     })
     .join('');
+}
+
+/* ── 定休日・臨時休業パネル ── */
+function renderHolidays() {
+  const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
+  $('weekly-toggles').innerHTML = dayNames
+    .map((d, i) => {
+      const on = holidayWeekly.has(i);
+      return `<button class="chip ${on ? 'chip--stop' : ''}" data-wtoggle="${i}" title="毎週${d}曜を休みにする">${d}</button>`;
+    })
+    .join('');
+
+  const todayIso = isoOfMid(startOfToday());
+  const upcoming = [...holidayDates].filter((d) => d >= todayIso).sort();
+  $('holiday-list').innerHTML = upcoming.length
+    ? upcoming
+        .map((d) => {
+          const dt = new Date(d + 'T00:00:00');
+          const wd = dayNames[dt.getDay()];
+          const label = `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}(${wd})`;
+          return `<span class="holiday-pill">${label}<button data-hdel="${d}" aria-label="削除">×</button></span>`;
+        })
+        .join('')
+    : '<span class="holiday-empty">臨時休業の予定はありません</span>';
+}
+
+async function toggleWeekly(day) {
+  const set = new Set(holidayWeekly);
+  if (set.has(day)) set.delete(day);
+  else set.add(day);
+  const { ok, data } = await callAction('holiday_set_weekly', { days: [...set] });
+  if (!ok) {
+    alert('定休日の変更に失敗しました: ' + (data.error || 'エラー'));
+    return;
+  }
+  refresh();
+}
+
+async function addHoliday() {
+  const v = $('holiday-date').value;
+  if (!v) {
+    alert('日付を選んでください');
+    return;
+  }
+  const { ok, data } = await callAction('holiday_add_date', { date: v });
+  if (!ok) {
+    alert('追加に失敗しました: ' + (data.error || 'エラー'));
+    return;
+  }
+  $('holiday-date').value = '';
+  refresh();
+}
+
+async function removeHoliday(dateIso) {
+  const { ok, data } = await callAction('holiday_remove_date', { date: dateIso });
+  if (!ok) {
+    alert('削除に失敗しました: ' + (data.error || 'エラー'));
+    return;
+  }
+  refresh();
 }
 
 /* ── 注文カード描画 ── */
@@ -364,12 +445,15 @@ async function toggleSlot(iso) {
 
 /* ── イベント ── */
 document.addEventListener('click', (ev) => {
-  const t = ev.target.closest('[data-confirm],[data-done],[data-slot]');
+  const t = ev.target.closest('[data-confirm],[data-done],[data-slot],[data-wtoggle],[data-hdel]');
   if (!t) return;
   if (t.dataset.confirm) confirmOrder(Number(t.dataset.confirm));
   if (t.dataset.done) setDone(Number(t.dataset.done));
   if (t.dataset.slot) toggleSlot(t.dataset.slot);
+  if (t.dataset.wtoggle !== undefined && t.dataset.wtoggle !== '') toggleWeekly(Number(t.dataset.wtoggle));
+  if (t.dataset.hdel) removeHoliday(t.dataset.hdel);
 });
+$('add-holiday-btn').addEventListener('click', addHoliday);
 
 $('silence-btn').addEventListener('click', () => {
   stopChime();

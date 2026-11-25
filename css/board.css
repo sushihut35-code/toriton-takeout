@@ -106,6 +106,80 @@ body {
   text-decoration: line-through;
 }
 
+/* ── 定休日・臨時休業パネル ── */
+.holiday-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 12px;
+}
+.holiday-weekly {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.holiday-label {
+  font-size: 12px;
+  color: var(--sub);
+  white-space: nowrap;
+}
+.holiday-weekly .chips {
+  padding-bottom: 0;
+}
+.holiday-weekly .chip {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+.holiday-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+#holiday-date {
+  background: #1c1610;
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  color-scheme: dark;
+}
+.holiday-add .c-btn {
+  padding: 9px 16px;
+}
+.holiday-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.holiday-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #4a1f1f;
+  border: 1.5px solid var(--new);
+  color: #ffb3b3;
+  border-radius: 999px;
+  padding: 5px 8px 5px 12px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.holiday-pill button {
+  background: none;
+  border: none;
+  color: #ffb3b3;
+  font-size: 15px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 4px;
+}
+.holiday-empty {
+  font-size: 13px;
+  color: var(--sub);
+}
+
 /* ── 注文カード ── */
 .cards {
   display: grid;
