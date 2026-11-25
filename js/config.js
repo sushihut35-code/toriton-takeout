@@ -16,10 +16,7 @@ const CONFIG = {
   SLOT_MINUTES: 15,      // 受取時刻の選択肢の刻み(分)
   MAX_HOURS_AHEAD: 3,    // 何時間先まで受け付けるか
 
-  // ── Supabase(プロジェクトを作ったら記入する) ──
-  // URL例: https://xxxxxxxx.supabase.co
-  // キー : Supabase「Project Settings → API」の anon public キー
-  // ※anonキーは公開してよいキー(RLSで書き込みしか許可していない)
-  SUPABASE_URL: '',
-  SUPABASE_ANON_KEY: '',
+  // ── Supabase(接続済み・anonキーは公開用なのでこのままでOK) ──
+  SUPABASE_URL: 'https://hsjylabnkkmwnsaehbxe.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_mqo8cSYvGcwPVqhgoHRK8w_p-I0bUan',
 };
