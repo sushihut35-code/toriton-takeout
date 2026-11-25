@@ -266,6 +266,90 @@ body {
   font-size: 13px;
 }
 
+/* ── メニュー管理パネル ── */
+.menu-wrap {
+  padding-bottom: 12px;
+}
+.menu-cat {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--accent);
+  margin: 12px 0 6px;
+}
+.menu-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+.menu-row--off {
+  opacity: 0.45;
+}
+.menu-row__name {
+  flex: 1;
+  min-width: 140px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.menu-row__price {
+  font-weight: 800;
+  color: var(--accent);
+  font-size: 14px;
+  min-width: 72px;
+  text-align: right;
+}
+.menu-chip {
+  border: 1.5px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.menu-chip--on {
+  background: #2f4a32;
+  border-color: #3d5c40;
+  color: #bfe8c2;
+}
+.menu-chip--off {
+  background: #4a1f1f;
+  border-color: var(--new);
+  color: #ffb3b3;
+}
+.menu-edit-form {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 420px;
+}
+.menu-edit-form input {
+  background: #1c1610;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  padding: 10px 12px;
+  font-size: 14px;
+  width: 100%;
+}
+.menu-edit-btns {
+  display: flex;
+  gap: 8px;
+}
+.btn-ghost-dark {
+  background: none;
+  border: 1.5px solid var(--line);
+  color: var(--sub);
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
 /* ── 注文カード ── */
 .cards {
   display: grid;

@@ -57,6 +57,26 @@
 </section>
 
 <section class="b-section">
+  <details class="b-details" id="menu-details">
+    <summary>📝 メニュー管理 <span id="menu-summary"></span></summary>
+    <div class="menu-wrap">
+      <div id="menu-panel"></div>
+      <div class="menu-edit-form">
+        <div class="holiday-label">項目の追加(✏️を押すとここで編集にもなる):</div>
+        <input id="menu-cat" list="cat-list" placeholder="カテゴリ(例:炭火焼き)">
+        <datalist id="cat-list"></datalist>
+        <input id="menu-name" placeholder="品名(例:手羽先唐揚げ 500g)">
+        <input id="menu-price" type="number" inputmode="numeric" placeholder="価格(円)">
+        <div class="menu-edit-btns">
+          <button id="menu-save-btn" class="c-btn c-btn--ok">追加</button>
+          <button id="menu-cancel-btn" class="btn-ghost-dark" hidden>キャンセル</button>
+        </div>
+      </div>
+    </div>
+  </details>
+</section>
+
+<section class="b-section">
   <h2 class="b-h2 b-h2--new">仮受付 <small>(時間を選んで確定)</small></h2>
   <div id="orders-new" class="cards"></div>
   <div id="orders-new-empty" class="empty">仮受付の注文はありません</div>

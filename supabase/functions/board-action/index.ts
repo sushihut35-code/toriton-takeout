@@ -290,6 +290,50 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
+    // ── メニュー管理(ボードから) ──
+    case "menu_save": {
+      const category = String(payload.category ?? "").trim();
+      const name = String(payload.name ?? "").trim();
+      const price = Number(payload.price);
+      const sortNo = Number(payload.sort_no) || 999;
+      if (!category || !name || !Number.isInteger(price) || price < 0) {
+        return json({ error: "bad payload" }, 400);
+      }
+      if (payload.id) {
+        const { error } = await db
+          .from("menu_items")
+          .update({ category, name, price })
+          .eq("id", Number(payload.id));
+        if (error) return json({ error: error.message }, 500);
+      } else {
+        const { error } = await db
+          .from("menu_items")
+          .insert({ category, name, price, sort_no: sortNo });
+        if (error) return json({ error: error.message }, 500);
+      }
+      return json({ ok: true });
+    }
+
+    case "menu_toggle": {
+      const id = Number(payload.id);
+      const { error } = await db
+        .from("menu_items")
+        .update({ available: !!payload.available })
+        .eq("id", id);
+      if (error) return json({ error: error.message }, 500);
+      return json({ ok: true });
+    }
+
+    case "menu_delete": {
+      const id = Number(payload.id);
+      const { error } = await db
+        .from("menu_items")
+        .delete()
+        .eq("id", id);
+      if (error) return json({ error: error.message }, 500);
+      return json({ ok: true });
+    }
+
     // 時間帯ストップ(お客の選択肢から消す)
     case "slot_stop": {
       const slotAt = new Date(payload.slot_at);

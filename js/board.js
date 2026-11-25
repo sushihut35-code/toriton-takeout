@@ -16,6 +16,8 @@ let orders = [];
 let stops = new Set(); // 分単位のepochのセット
 let holidayWeekly = new Set(); // 毎週の定休(0=日..6=土)
 let holidayDates = new Set(); // 臨時休業('YYYY-MM-DD')
+let menuItems = [];           // メニュー一覧(Supabase)
+let menuEditingId = null;     // 編集中のメニューID(null=新規追加)
 let refreshTimer = null;
 
 const $ = (id) => document.getElementById(id);
@@ -161,13 +163,15 @@ async function callAction(action, payload) {
 /* ── データ取得 ── */
 async function loadAll() {
   const today = startOfToday().toISOString();
-  const [oRes, sRes, hRes] = await Promise.all([
+  const [oRes, sRes, hRes, mRes] = await Promise.all([
     db.from('takeout_orders').select('*').gte('pickup_at', today).order('pickup_at'),
     db.from('pickup_slot_stops').select('slot_at').gte('slot_at', today),
     db.from('shop_holidays').select('kind,day_of_week,holiday_date'),
+    db.from('menu_items').select('*').order('sort_no'),
   ]);
   orders = oRes.data || [];
   stops = new Set((sRes.data || []).map((r) => minuteKey(r.slot_at)));
+  menuItems = mRes.data || [];
   holidayWeekly = new Set();
   holidayDates = new Set();
   (hRes.data || []).forEach((r) => {
@@ -180,6 +184,7 @@ async function loadAll() {
   });
   renderSlots();
   renderHolidays();
+  renderMenuPanel();
   renderOrders();
   checkNewArrivals();
 }
@@ -338,6 +343,115 @@ async function toggleWeekly(day) {
   refresh();
 }
 
+/* ── メニュー管理パネル ── */
+function renderMenuPanel() {
+  const cats = [];
+  const map = new Map();
+  menuItems.forEach((r) => {
+    if (!map.has(r.category)) {
+      map.set(r.category, []);
+      cats.push(r.category);
+    }
+    map.get(r.category).push(r);
+  });
+  $('menu-panel').innerHTML = cats.length
+    ? cats
+        .map(
+          (c) => `
+      <div class="menu-cat">${esc(c)}</div>
+      ${map
+        .get(c)
+        .map(
+          (r) => `
+      <div class="menu-row ${r.available ? '' : 'menu-row--off'}">
+        <span class="menu-row__name">${esc(r.name)}</span>
+        <span class="menu-row__price">¥${Number(r.price).toLocaleString()}</span>
+        <button class="menu-chip ${r.available ? 'menu-chip--on' : 'menu-chip--off'}" data-mtoggle="${r.id}">${r.available ? '販売中' : '売り切れ'}</button>
+        <button class="menu-chip" data-medit="${r.id}" title="編集">✏️</button>
+        <button class="menu-chip" data-mdel="${r.id}" title="削除">🗑</button>
+      </div>`
+        )
+        .join('')}`
+        )
+        .join('')
+    : '<span class="holiday-empty">メニューがまだありません</span>';
+
+  $('cat-list').innerHTML = cats
+    .map((c) => `<option value="${esc(c)}"></option>`)
+    .join('');
+  $('menu-summary').textContent = `─ ${menuItems.length}品目`;
+}
+
+async function menuToggle(id) {
+  const item = menuItems.find((m) => m.id === id);
+  if (!item) return;
+  const { ok, data } = await callAction('menu_toggle', {
+    id,
+    available: !item.available,
+  });
+  if (!ok) {
+    alert('変更に失敗しました: ' + (data.error || 'エラー'));
+    return;
+  }
+  refresh();
+}
+
+async function menuDelete(id) {
+  const item = menuItems.find((m) => m.id === id);
+  if (!item) return;
+  if (!confirm(`「${item.name}」をメニューから削除します。よろしいですか?`)) return;
+  const { ok, data } = await callAction('menu_delete', { id });
+  if (!ok) {
+    alert('削除に失敗しました: ' + (data.error || 'エラー'));
+    return;
+  }
+  refresh();
+}
+
+function menuEdit(id) {
+  const item = menuItems.find((m) => m.id === id);
+  if (!item) return;
+  menuEditingId = id;
+  $('menu-cat').value = item.category;
+  $('menu-name').value = item.name;
+  $('menu-price').value = item.price;
+  $('menu-save-btn').textContent = '更新';
+  $('menu-cancel-btn').hidden = false;
+  $('menu-details').open = true;
+}
+
+function menuEditReset() {
+  menuEditingId = null;
+  $('menu-cat').value = '';
+  $('menu-name').value = '';
+  $('menu-price').value = '';
+  $('menu-save-btn').textContent = '追加';
+  $('menu-cancel-btn').hidden = true;
+}
+
+async function menuSave() {
+  const category = $('menu-cat').value.trim();
+  const name = $('menu-name').value.trim();
+  const price = Number($('menu-price').value);
+  if (!category || !name || !Number.isInteger(price) || price <= 0) {
+    alert('カテゴリ・品名・価格(半角数字)を入力してください');
+    return;
+  }
+  const sortNo = menuItems.length
+    ? Math.max(...menuItems.map((m) => Number(m.sort_no) || 0)) + 1
+    : 1;
+  const payload = menuEditingId
+    ? { id: menuEditingId, category, name, price }
+    : { category, name, price, sort_no: sortNo };
+  const { ok, data } = await callAction('menu_save', payload);
+  if (!ok) {
+    alert('保存に失敗しました: ' + (data.error || 'エラー'));
+    return;
+  }
+  menuEditReset();
+  refresh();
+}
+
 /* ── 注文カード描画 ── */
 function itemsHtml(o) {
   try {
@@ -485,7 +599,7 @@ async function toggleSlot(iso) {
 /* ── イベント ── */
 document.addEventListener('click', (ev) => {
   const t = ev.target.closest(
-    '[data-confirm],[data-done],[data-slot],[data-wtoggle],[data-cal],[data-calnav]'
+    '[data-confirm],[data-done],[data-slot],[data-wtoggle],[data-cal],[data-calnav],[data-mtoggle],[data-medit],[data-mdel]'
   );
   if (!t) return;
   if (t.dataset.confirm) confirmOrder(Number(t.dataset.confirm));
@@ -499,7 +613,12 @@ document.addEventListener('click', (ev) => {
     if (calM > 11) { calM = 0; calY++; }
     renderCalendar();
   }
+  if (t.dataset.mtoggle) menuToggle(Number(t.dataset.mtoggle));
+  if (t.dataset.medit) menuEdit(Number(t.dataset.medit));
+  if (t.dataset.mdel) menuDelete(Number(t.dataset.mdel));
 });
+$('menu-save-btn').addEventListener('click', menuSave);
+$('menu-cancel-btn').addEventListener('click', menuEditReset);
 
 $('today-holiday-btn').addEventListener('click', () => {
   toggleDateHoliday(isoOfMid(startOfToday()));

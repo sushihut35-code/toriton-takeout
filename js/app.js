@@ -11,20 +11,73 @@ let profile = { displayName: '', userId: '' };
 let stopMinutes = new Set(); // 店が受付停止した時間帯(分単位epoch)
 let holidayWeekly = new Set(); // 毎週の定休(0=日..6=土)
 let holidayDates = new Set(); // 臨時休業('YYYY-MM-DD')
+let MENU_ROWS = null; // Supabaseのメニュー管理データ(nullならmenu.jsの予備を使う)
+
+// カテゴリー名 → 絵文字(見た目のお楽しみ。無ければ付かないだけ)
+const CATEGORY_EMOJI = {
+  '炭火焼き': '🔥',
+  '手羽先唐揚げ': '🍗',
+  'サイドメニュー': '🍟',
+};
+
+// 表示用のメニュー構造(DBがあればDBから、無ければmenu.jsから)
+function normalizedMenu() {
+  if (!MENU_ROWS) return MENU;
+  const cats = [];
+  const map = new Map();
+  MENU_ROWS.forEach((r) => {
+    if (!map.has(r.category)) {
+      map.set(r.category, []);
+      cats.push(r.category);
+    }
+    map.get(r.category).push({ id: 'db-' + r.id, name: r.name, price: r.price });
+  });
+  return {
+    categories: cats.map((c) => ({
+      id: c,
+      name: c,
+      emoji: CATEGORY_EMOJI[c] || '',
+      items: map.get(c),
+    })),
+  };
+}
+
+// ボードでメニューを読み込む(読めなければmenu.jsの予備へ)
+async function loadMenu() {
+  if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY || !window.supabase) return;
+  try {
+    const db = window.supabase.createClient(
+      CONFIG.SUPABASE_URL,
+      CONFIG.SUPABASE_ANON_KEY
+    );
+    const { data } = await db
+      .from('menu_items')
+      .select('*')
+      .eq('available', true)
+      .order('sort_no');
+    if (data && data.length) MENU_ROWS = data;
+  } catch (e) {
+    // 読み取り失敗時はmenu.jsを使用
+  }
+}
 
 // ── メニュー索引(カート操作用に id → 品目 を引けるようにする) ──
 const ITEM_INDEX = new Map();
-MENU.categories.forEach((cat) => {
-  cat.items.forEach((it) => {
-    if (it.variants) {
-      it.variants.forEach((v) => {
-        ITEM_INDEX.set(v.id, { name: `${it.name} ${v.label}`, price: v.price });
-      });
-    } else {
-      ITEM_INDEX.set(it.id, { name: it.name, price: it.price });
-    }
+function buildItemIndex() {
+  ITEM_INDEX.clear();
+  normalizedMenu().categories.forEach((cat) => {
+    cat.items.forEach((it) => {
+      if (it.variants) {
+        it.variants.forEach((v) => {
+          ITEM_INDEX.set(v.id, { name: `${it.name} ${v.label}`, price: v.price });
+        });
+      } else {
+        ITEM_INDEX.set(it.id, { name: it.name, price: it.price });
+      }
+    });
   });
-});
+}
+buildItemIndex();
 
 const $ = (id) => document.getElementById(id);
 
@@ -213,7 +266,8 @@ function renderSlots() {
    ============================================ */
 function renderMenu() {
   const area = $('menu-area');
-  area.innerHTML = MENU.categories
+  const menu = normalizedMenu();
+  area.innerHTML = menu.categories
     .map(
       (cat) => `
     <section class="category">
@@ -482,7 +536,13 @@ async function prefillCustomerInfo() {
 
 (async function init() {
   await initLiff();
-  await Promise.all([loadStops(), loadHolidays(), prefillCustomerInfo()]);
+  await Promise.all([
+    loadStops(),
+    loadHolidays(),
+    loadMenu(),
+    prefillCustomerInfo(),
+  ]);
+  buildItemIndex();
   renderMenu();
   renderSlots();
   refreshCartUI();
