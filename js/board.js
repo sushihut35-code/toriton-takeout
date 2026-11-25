@@ -261,6 +261,18 @@ function renderHolidays() {
         })
         .join('')
     : '<span class="holiday-empty">臨時休業の予定はありません</span>';
+
+  // 閉じたままでも分かるよう、見出しに現状の要約を表示
+  const parts = [];
+  if (holidayWeekly.size > 0) {
+    parts.push(
+      '毎週 ' + [...holidayWeekly].sort().map((i) => dayNames[i]).join('・')
+    );
+  }
+  if (upcoming.length > 0) parts.push(`臨時 ${upcoming.length}件`);
+  $('holiday-summary').textContent = parts.length
+    ? '📅 定休日・臨時休業 ─ ' + parts.join(' / ')
+    : '📅 定休日・臨時休業(未設定)';
 }
 
 async function toggleWeekly(day) {

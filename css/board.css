@@ -106,7 +106,44 @@ body {
   text-decoration: line-through;
 }
 
-/* ── 定休日・臨時休業パネル ── */
+/* ── 定休日・臨時休業(折りたたみ) ── */
+.b-details {
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  padding: 0 12px;
+  margin-bottom: 6px;
+}
+.b-details summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 12px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--sub);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+.b-details summary::-webkit-details-marker {
+  display: none;
+}
+.b-details summary::after {
+  content: "▾";
+  margin-left: auto;
+  transition: transform 0.2s;
+}
+.b-details[open] summary::after {
+  transform: rotate(180deg);
+}
+.b-details[open] summary {
+  color: var(--accent);
+}
+.b-details .holiday-row {
+  padding-bottom: 12px;
+}
+
+/* ── 定休日・臨時休業パネルの中身 ── */
 .holiday-row {
   display: flex;
   flex-direction: column;

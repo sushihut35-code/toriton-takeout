@@ -24,19 +24,21 @@
 </section>
 
 <section class="b-section">
-  <h2 class="b-h2">📅 定休日・臨時休業 <small>(その日は注文不可・自動で次の営業日を案内)</small></h2>
-  <div class="holiday-row">
-    <div class="holiday-weekly">
-      <span class="holiday-label">毎週の定休:</span>
-      <div id="weekly-toggles" class="chips"></div>
+  <details class="b-details" id="holiday-details">
+    <summary><span id="holiday-summary">📅 定休日・臨時休業</span></summary>
+    <div class="holiday-row">
+      <div class="holiday-weekly">
+        <span class="holiday-label">毎週の定休:</span>
+        <div id="weekly-toggles" class="chips"></div>
+      </div>
+      <div class="holiday-add">
+        <span class="holiday-label">臨時休業を追加:</span>
+        <input type="date" id="holiday-date">
+        <button id="add-holiday-btn" class="c-btn c-btn--ok">追加</button>
+      </div>
+      <div id="holiday-list" class="holiday-list"></div>
     </div>
-    <div class="holiday-add">
-      <span class="holiday-label">臨時休業を追加:</span>
-      <input type="date" id="holiday-date">
-      <button id="add-holiday-btn" class="c-btn c-btn--ok">追加</button>
-    </div>
-    <div id="holiday-list" class="holiday-list"></div>
-  </div>
+  </details>
 </section>
 
 <section class="b-section">
