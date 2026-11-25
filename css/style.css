@@ -296,6 +296,13 @@ body {
 .field textarea {
   resize: none;
 }
+.field__help {
+  display: block;
+  font-size: 11px;
+  color: var(--sub);
+  margin-top: 5px;
+  line-height: 1.5;
+}
 
 /* ── 合計・ボタン ── */
 .sheet__total {

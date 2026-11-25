@@ -300,7 +300,7 @@ async function submitOrder() {
             text:
               'ご注文ありがとうございます!\n' +
               `受付番号 #${data.id}\n` +
-              `受取 ${pickupLabel} / 合計 ¥${total.toLocaleString()}\n` +
+              `希望受取時間 ${pickupLabel} / 合計 ¥${total.toLocaleString()}\n` +
               '※これはご注文の控えです。受取時にお名前をお伝えください。',
           },
         ]);
