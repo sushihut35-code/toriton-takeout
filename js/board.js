@@ -255,14 +255,6 @@ let calY; // カレンダー表示中の年
 let calM; // カレンダー表示中の月(0-11)
 
 function renderHolidays() {
-  const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
-  $('weekly-toggles').innerHTML = dayNames
-    .map((d, i) => {
-      const on = holidayWeekly.has(i);
-      return `<button class="chip ${on ? 'chip--stop' : ''}" data-wtoggle="${i}" title="毎週${d}曜を休みにする">${d}</button>`;
-    })
-    .join('');
-
   renderCalendar();
 
   // 「今日」の状態を専用ボタンとバナーに反映
@@ -279,12 +271,7 @@ function renderHolidays() {
   const upcoming = [...holidayDates].filter((d) => d >= todayIso).sort();
   const parts = [];
   if (todayClosed) parts.push('⛔本日休業');
-  if (holidayWeekly.size > 0) {
-    parts.push(
-      '毎週 ' + [...holidayWeekly].sort().map((i) => dayNames[i]).join('・')
-    );
-  }
-  if (upcoming.length > 0) parts.push(`臨時 ${upcoming.length}件`);
+  if (upcoming.length > 0) parts.push(`休業 ${upcoming.length}日`);
   $('holiday-summary').textContent = parts.length
     ? '📅 定休日・臨時休業 ─ ' + parts.join(' / ')
     : '📅 定休日・臨時休業(未設定)';
@@ -332,18 +319,6 @@ async function toggleDateHoliday(iso) {
   const { ok, data } = await callAction(action, { date: iso });
   if (!ok) {
     alert('休業日の変更に失敗しました: ' + (data.error || 'エラー'));
-    return;
-  }
-  refresh();
-}
-
-async function toggleWeekly(day) {
-  const set = new Set(holidayWeekly);
-  if (set.has(day)) set.delete(day);
-  else set.add(day);
-  const { ok, data } = await callAction('holiday_set_weekly', { days: [...set] });
-  if (!ok) {
-    alert('定休日の変更に失敗しました: ' + (data.error || 'エラー'));
     return;
   }
   refresh();
@@ -605,13 +580,12 @@ async function toggleSlot(iso) {
 /* ── イベント ── */
 document.addEventListener('click', (ev) => {
   const t = ev.target.closest(
-    '[data-confirm],[data-done],[data-slot],[data-wtoggle],[data-cal],[data-calnav],[data-mtoggle],[data-medit],[data-mdel]'
+    '[data-confirm],[data-done],[data-slot],[data-cal],[data-calnav],[data-mtoggle],[data-medit],[data-mdel]'
   );
   if (!t) return;
   if (t.dataset.confirm) confirmOrder(Number(t.dataset.confirm));
   if (t.dataset.done) setDone(Number(t.dataset.done));
   if (t.dataset.slot) toggleSlot(t.dataset.slot);
-  if (t.dataset.wtoggle !== undefined && t.dataset.wtoggle !== '') toggleWeekly(Number(t.dataset.wtoggle));
   if (t.dataset.cal) toggleDateHoliday(t.dataset.cal);
   if (t.dataset.calnav) {
     calM += Number(t.dataset.calnav);
