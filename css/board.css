@@ -142,6 +142,12 @@ body {
 .b-details .holiday-row {
   padding-bottom: 12px;
 }
+.slots-wrap {
+  padding: 10px 0 14px;
+}
+.slots-wrap .chips {
+  padding-bottom: 0;
+}
 
 /* ── 今日の臨時休業ボタン・本日休業バナー ── */
 .btn-today-closure {

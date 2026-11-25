@@ -229,7 +229,13 @@ function daySlots(mid) {
 function renderSlots() {
   const day = chipsDay();
   const now = Date.now();
-  $('chips-date').textContent = `受付時間帯 ${dayLabel(day)}`;
+  // 見出しには日付と、停止中の時間帯があればその数を出す
+  const stoppedCount = daySlots(day).filter(
+    (d) => d.getTime() >= now && stops.has(minuteKey(d))
+  ).length;
+  $('chips-date').textContent =
+    `受付時間帯 ${dayLabel(day)}` +
+    (stoppedCount > 0 ? ` ─ 🛑${stoppedCount}コマ停止中` : '');
   $('slot-chips').innerHTML = daySlots(day)
     .map((d) => {
       const past = d.getTime() < now;
