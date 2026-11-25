@@ -1,0 +1,325 @@
+/* 鳥とん 受注ボード(レジPC常時表示想定・ダークテーマ) */
+:root {
+  --bg: #17130f;
+  --panel: #241d17;
+  --card: #2c241d;
+  --ink: #f2ece4;
+  --sub: #a89a8c;
+  --accent: #ff8a3d;
+  --new: #ff5252;
+  --ok: #6fbf73;
+  --line: #3a3027;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, "Hiragino Sans", "Noto Sans JP",
+    "Yu Gothic UI", sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.b-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 3px solid var(--accent);
+  background: var(--panel);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.b-title {
+  font-size: 20px;
+  font-weight: 800;
+}
+.b-status {
+  font-size: 12px;
+  color: var(--sub);
+}
+.b-status--live {
+  color: var(--ok);
+}
+
+.b-section {
+  padding: 18px 20px 4px;
+}
+.b-h2 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 10px;
+}
+.b-h2 small {
+  color: var(--sub);
+  font-weight: 400;
+}
+.b-h2--new {
+  color: var(--new);
+}
+.b-h2--done {
+  color: var(--sub);
+}
+
+.empty {
+  color: var(--sub);
+  font-size: 13px;
+  padding: 6px 0 12px;
+}
+
+/* ── 時間帯チップ ── */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 8px;
+}
+.chip {
+  border: 1.5px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.chip--past {
+  opacity: 0.35;
+  cursor: default;
+}
+.chip--stop {
+  background: #4a1f1f;
+  border-color: var(--new);
+  color: #ffb3b3;
+  text-decoration: line-through;
+}
+
+/* ── 注文カード ── */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+  padding-bottom: 8px;
+}
+
+.card {
+  background: var(--card);
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.card--new {
+  border-color: var(--new);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+.card--ok {
+  border-color: #3d5c40;
+}
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 82, 82, 0.0); }
+  50% { box-shadow: 0 0 0 5px rgba(255, 82, 82, 0.25); }
+}
+
+.c-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+.c-no {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--accent);
+}
+.c-time-now {
+  font-size: 15px;
+  font-weight: 700;
+}
+.c-name {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.c-tel {
+  font-size: 13px;
+  color: var(--sub);
+  margin-left: 8px;
+  text-decoration: none;
+}
+.c-tel:hover {
+  text-decoration: underline;
+}
+.c-items {
+  font-size: 14px;
+  line-height: 1.7;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 8px 0;
+  margin-bottom: 8px;
+}
+.c-total {
+  text-align: right;
+  font-weight: 800;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+.c-note {
+  font-size: 13px;
+  color: #ffd48a;
+  background: rgba(255, 212, 138, 0.08);
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-bottom: 8px;
+}
+
+.c-act {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.c-time {
+  flex: 1;
+  min-width: 0;
+  background: #1c1610;
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 8px;
+  font-size: 16px;
+  font-weight: 700;
+}
+.c-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.c-btn--ok {
+  background: var(--accent);
+  color: #fff;
+}
+.c-btn--ok:disabled {
+  background: #6b5b4a;
+}
+.c-btn--done {
+  background: #2f4a32;
+  color: #bfe8c2;
+  border: 1.5px solid #3d5c40;
+}
+
+/* ── 受渡済みリスト ── */
+.done-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 12px;
+}
+.done-row {
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--sub);
+}
+.done-row b {
+  color: var(--ink);
+}
+
+/* ── 新規注文バナー ── */
+.chime-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: var(--new);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 14px;
+  font-size: 18px;
+  font-weight: 800;
+  animation: bannerflash 0.8s linear infinite;
+}
+@keyframes bannerflash {
+  0%, 100% { background: var(--new); }
+  50% { background: #c62828; }
+}
+#silence-btn {
+  background: #fff;
+  color: #c62828;
+  border: none;
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* ── ロック/開始オーバーレイ ── */
+.lock {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.lock__box {
+  background: var(--panel);
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  padding: 28px 32px;
+  text-align: center;
+  width: min(92vw, 380px);
+}
+.lock__title {
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 16px;
+}
+#pw-input {
+  width: 100%;
+  background: #1c1610;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  padding: 12px;
+  font-size: 16px;
+  margin-bottom: 12px;
+}
+.lock__btn {
+  width: 100%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 13px;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.lock__hint {
+  font-size: 11px;
+  color: var(--sub);
+  margin-top: 12px;
+  line-height: 1.6;
+}

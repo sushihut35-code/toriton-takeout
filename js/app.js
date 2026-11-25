@@ -8,6 +8,7 @@
 // ── 状態 ──
 const cart = new Map();   // id -> { id, name, price, qty }
 let profile = { displayName: '', userId: '' };
+let stopMinutes = new Set(); // 店が受付停止した時間帯(分単位epoch)
 
 // ── メニュー索引(カート操作用に id → 品目 を引けるようにする) ──
 const ITEM_INDEX = new Map();
@@ -59,6 +60,7 @@ function hmDate(hm) {
 }
 
 // 受取時刻の選択肢一覧。営業時間外なら 'CLOSED' を返す
+// ※stopMinutes(店による受付停止)に含まれる時間は除外
 function getSlots() {
   const now = new Date();
   const open = hmDate(CONFIG.OPEN_TIME);
@@ -76,10 +78,32 @@ function getSlots() {
   );
   const out = [];
   while (t <= limit) {
-    out.push(new Date(t));
+    if (!stopMinutes.has(Math.floor(t / 60000))) out.push(new Date(t));
     t += stepMs;
   }
   return out.length ? out : 'CLOSED';
+}
+
+// 店が受付停止した時間帯をSupabaseから読み込む
+async function loadStops() {
+  if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY || !window.supabase) return;
+  try {
+    const db = window.supabase.createClient(
+      CONFIG.SUPABASE_URL,
+      CONFIG.SUPABASE_ANON_KEY
+    );
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const { data } = await db
+      .from('pickup_slot_stops')
+      .select('slot_at')
+      .gte('slot_at', start.toISOString());
+    (data || []).forEach((r) =>
+      stopMinutes.add(Math.floor(new Date(r.slot_at).getTime() / 60000))
+    );
+  } catch (e) {
+    // 読み込めなければ全スロットを出す(店側の故障で客を閉め出さない)
+  }
 }
 
 function hmLabel(d) {
@@ -301,7 +325,8 @@ async function submitOrder() {
               'ご注文ありがとうございます!\n' +
               `受付番号 #${data.id}\n` +
               `希望受取時間 ${pickupLabel} / 合計 ¥${total.toLocaleString()}\n` +
-              '※これはご注文の控えです。受取時にお名前をお伝えください。',
+              '※混雑時は受取時間を調整のうえ、こちらのトークでご連絡いたします。\n' +
+              '受取時にお名前をお伝えください。',
           },
         ]);
       }
@@ -349,8 +374,9 @@ $('cart-backdrop').addEventListener('click', (e) => {
 });
 
 (async function init() {
+  await initLiff();
+  await loadStops();
   renderMenu();
   renderSlots();
   refreshCartUI();
-  await initLiff();
 })();

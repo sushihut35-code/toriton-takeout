@@ -1,55 +1,71 @@
-# 鳥とん 持ち帰り注文(LIFFアプリ)
+# 鳥とん 持ち帰り注文(LIFFアプリ + 受注ボード)
 
-LINE公式アカウントのトーク画面から開く、持ち帰り注文フォーム。
-ビルド不要の完全静的サイト(GitHub Pages で運用)。
+LINE公式アカウントのトーク画面から開く持ち帰り注文フォームと、
+店のレジPCで常時表示する受注ボードのセット。ビルド不要の完全静的サイト。
 
 ## 仕組み
 
 ```
-客のLINE → リッチメニュー「注文する」
-   → LIFF(このサイト)でメニュー選択・受取時刻を指定
-   → 注文を Supabase の takeout_orders テーブルに書き込み
-   → トークに控えメッセージを自動送信(liff.sendMessages / 無料)
-   → 店は Supabase(将来:受注ボード)で注文を確認
+【お客】LINE → リッチメニュー「注文する」
+   → LIFF注文フォーム(メニュー・希望受取時間・電話番号)
+   → 注文がSupabaseへ(仮受付 / status=new)
+        ↓ リアルタイム配信
+【お店】board.html(レジPC常時表示)
+   ├ 新規注文 → チャイムが確認するまで鳴り続ける
+   ├ 時間を選んで「確定」(時間変更時だけお客のLINEへ自動通知)
+   ├ 時間帯ストップ → お客の選択肢からその時間が消える
+   └ 「受渡済✔」で完了へ
 ```
 
-## ファイル構成
+## ページ
 
-| ファイル | 役割 |
+| URL | 用途 |
 |---|---|
-| `index.html` | 画面の骨組み |
-| `js/config.js` | **お店の設定**(営業時間・LIFF ID・Supabase接続情報) |
-| `js/menu.js` | **メニューデータ**(品揃え・値段) |
-| `js/app.js` | 動き(LIFF初期化・カート・注文送信) |
-| `css/style.css` | 見た目 |
-| `supabase.sql` | Supabase 側のテーブル作成SQL |
-| `.nojekyll` | GitHub Pages のおまじない(必須・触らない) |
+| `/` (index.html) | お客用注文フォーム(LIFFで開く) |
+| `/board.html` | 店用受注ボード(レジPCのブラウザで常時表示) |
 
-## セットアップ手順(初回のみ)
+## セットアップ手順(初回)
 
-1. **Supabaseプロジェクト作成** → SQLエディタで `supabase.sql` を実行
-2. `js/config.js` に `SUPABASE_URL` / `SUPABASE_ANON_KEY` を記入
-   (Project Settings → API の「Project URL」と「anon public」)
-3. このリポジトリを GitHub へ push し、**Settings → Pages** で
-   ブランチ `main` / フォルダ `/ (root)` から Pages を有効化
-4. LINE Developers の LIFFアプリ設定で **エンドポイントURL** を
+### 1. Supabase
+
+1. [supabase.com](https://supabase.com) でプロジェクト作成(リージョン asia-pacific / Tokyo)
+2. SQLエディタで `supabase.sql` を実行(テーブル・RLS・リアルタイム設定)
+3. `js/config.js` に Project URL と anon(publishable)キーを記入
+
+### 2. エッジファンクション(ボードの操作・LINE通知用)
+
+1. Supabase管理画面 →「Edge Functions」→ 新規作成、名前は `board-action`
+2. `supabase/functions/board-action/index.ts` の中身を貼り付けてDeploy
+3. Project Settings → Edge Functions → Secrets に2つ登録:
+   - `BOARD_PASSWORD` … ボードを開く時の合言葉(自分で決める)
+   - `LINE_CHANNEL_ACCESS_TOKEN` … LINE Developers のチャネルアクセストークン(長期)
+
+### 3. GitHub Pages
+
+1. このリポジトリをpush → Settings → Pages で `main` / `/ (root)` を有効化
+2. LINE Developers のLIFF設定でエンドポイントURLを
    `https://sushihut35-code.github.io/toriton-takeout/` に変更
-5. スマホでLIFF URLを開いてテスト注文
+3. LIFFのスコープに `chat_message.write` を追加(注文控えをトークへ送るため)
 
-### ついでに確認(LINE Developers)
+### 4. 運用開始
 
-- LIFFアプリの **スコープ** に `chat_message.write` を追加すると、
-  注文後にトークへ控えが自動で届くようになる(任意だが推奨)
-- LIFFの**サイズ**は「フル」推奨
+- レジPCのブラウザで `https://sushihut35-code.github.io/toriton-takeout/board.html`
+  を開きっぱなしにする(F11で全画面表示がよい)
+- 初回のみパスワード入力 → 「受付開始」クリックでチャイムが有効になる
 
 ## 日常の変更
 
-- **値段・品揃えの変更** → `js/menu.js` を編集して push するだけ
-- **営業時間・受取までの時間** → `js/config.js` を編集して push するだけ
+- **値段・品揃え** → `js/menu.js` を編集してpush
+- **営業時間・受取までの最短時間・刻み** → `js/config.js` を編集してpush
+- **忙しい時** → ボードの時間帯チップをタップして受付停止(即フォームへ反映)
+
+## セキュリティメモ
+
+- anon(publishable)キーは公開用。書き込みは注文のINSERTのみ許可
+- 注文の確定・受渡済み・時間帯停止は、パスワード認証つき
+  エッジファンクション(board-action)経由でのみ可能(service_roleキーはクライアントに置かない)
+- チャネルアクセストークンはSupabaseのシークレットにのみ保存(リポジトリに置かない)
 
 ## 次工程(未実装)
 
-- `board.html` 受注ボード:Supabase をポーリング/Realtime購読し、
-  新規注文が来たら**チャイムが承認まで鳴り続ける**画面。
-  レジPCのブラウザで常時表示して使う
-- POS- 連携(受渡済みをPOSの売上へ自動計上)はさらに先
+- POS- 連携(受渡済みをPOSの売上へ自動計上)

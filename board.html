@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>鳥とん 受注ボード</title>
+<link rel="stylesheet" href="css/board.css">
+</head>
+<body>
+<header class="b-header">
+  <div class="b-title">🍗 鳥とん 受注ボード</div>
+  <div class="b-status" id="conn-status">…</div>
+</header>
+
+<!-- 新規注文アラート(チャイム中) -->
+<div id="chime-banner" class="chime-banner" hidden>
+  <span>🔔 新規注文が入っています!</span>
+  <button id="silence-btn">着信音を止める</button>
+</div>
+
+<section class="b-section">
+  <h2 class="b-h2">受付時間帯 <small>(タップで受付停止 / 再開)</small></h2>
+  <div id="slot-chips" class="chips">読み込み中…</div>
+</section>
+
+<section class="b-section">
+  <h2 class="b-h2 b-h2--new">仮受付 <small>(時間を選んで確定)</small></h2>
+  <div id="orders-new" class="cards"></div>
+  <div id="orders-new-empty" class="empty">仮受付の注文はありません</div>
+</section>
+
+<section class="b-section">
+  <h2 class="b-h2">確定済み <small>(受取時刻順)</small></h2>
+  <div id="orders-accepted" class="cards"></div>
+  <div id="orders-accepted-empty" class="empty">確定済みの注文はありません</div>
+</section>
+
+<section class="b-section">
+  <h2 class="b-h2 b-h2--done">受渡済み</h2>
+  <div id="orders-done" class="done-list"></div>
+  <div id="orders-done-empty" class="empty">本日の受渡済みはありません</div>
+</section>
+
+<!-- パスワードロック(初回のみ) -->
+<div id="lock" class="lock" hidden>
+  <div class="lock__box">
+    <div class="lock__title">🔒 受注ボード</div>
+    <input id="pw-input" type="password" placeholder="ボードのパスワード">
+    <button id="unlock-btn" class="lock__btn">開く</button>
+    <p class="lock__hint">パスワードはSupabaseのシークレット BOARD_PASSWORD に設定したもの</p>
+  </div>
+</div>
+
+<!-- チャイム有効化(ブラウザの決まりで1回クリックが必要) -->
+<div id="arm" class="lock" hidden>
+  <div class="lock__box">
+    <div class="lock__title">🔔 受付を開始</div>
+    <button id="arm-btn" class="lock__btn">クリックして受付開始</button>
+    <p class="lock__hint">ボタンを押すとチャイムが鳴れるようになります</p>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/board.js"></script>
+</body>
+</html>
