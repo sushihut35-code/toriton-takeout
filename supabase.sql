@@ -67,3 +67,30 @@ begin
   alter publication supabase_realtime add table public.pickup_slot_stops;
 exception when duplicate_object then null;
 end $$;
+
+-- ============================================
+-- v1.3 スマホ完結運用(店主へのLINE通知 + 未確認リマインド)
+-- ============================================
+
+-- 店主へ通知した時刻の記録(再通知の間隔制御に使う)
+alter table public.takeout_orders add column if not exists owner_notified_at timestamptz;
+
+-- 毎分チェックするcron(未確認注文があれば再通知させる)
+create extension if not exists pg_cron;
+create extension if not exists pg_net;
+
+select cron.unschedule('toriton-nag');
+select cron.schedule(
+  'toriton-nag',
+  '* * * * *',
+  $$
+  select net.http_post(
+    url := 'https://hsjylabnkkmwnsaehbxe.supabase.co/functions/v1/board-action',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer sb_publishable_mqo8cSYvGcwPVqhgoHRK8w_p-I0bUan'
+    ),
+    body := jsonb_build_object('action', 'nag_unconfirmed')
+  );
+  $$
+);

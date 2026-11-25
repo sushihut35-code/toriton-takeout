@@ -315,6 +315,16 @@ async function submitOrder() {
       .single();
     if (error) throw error;
 
+    // 店主のLINEへ「新規注文」通知を送る(成否は注文自体に影響させない)
+    fetch(`${CONFIG.SUPABASE_URL}/functions/v1/board-action`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${CONFIG.SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ action: 'notify_owner', payload: { id: data.id } }),
+    }).catch(() => {});
+
     // トーク画面へ控えを送る(chat_message.write スコープがあれば届く)
     try {
       if (typeof liff !== 'undefined' && liff.isInClient()) {

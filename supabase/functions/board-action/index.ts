@@ -1,12 +1,17 @@
 // 鳥とん 受注ボード用 エッジファンクション「board-action」
-// 役割: パスワード認証つきで注文の確定・受渡済み・時間帯ストップを処理し、
-//       時間変更があった時だけお客のLINEへプッシュ通知する
+// 役割:
+//   1) 新規注文を店主のLINEへ即プッシュ通知(スマホ完結運用)
+//   2) パスワード認証つきで注文の確定・受渡済み・時間帯ストップを処理
+//   3) 時間変更を伴う確定の時だけお客のLINEへ調整通知
 //
 // 必要なシークレット(Supabase管理画面で設定):
-//   BOARD_PASSWORD             ボードを開く時の合言葉(自分で決める)
-//   LINE_CHANNEL_ACCESS_TOKEN  LINE Developersのチャネルアクセストークン(長期)
+//   OWNER_LINE_USER_ID          店主のLINEユーザーID(Ufdeb... 形式)
+//   LINE_CHANNEL_ACCESS_TOKEN   LINE Developersのチャネルアクセストークン(長期)
+//   BOARD_PASSWORD              ボードを開く時の合言葉(自分で決める)
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const BOARD_URL = "https://sushihut35-code.github.io/toriton-takeout/board.html";
 
 const CORS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -31,9 +36,9 @@ function hmJST(iso: string): string {
 }
 
 async function linePush(token: string, to: string, text: string) {
-  if (!token || !to) return;
+  if (!token || !to) return false;
   try {
-    await fetch("https://api.line.me/v2/bot/message/push", {
+    const r = await fetch("https://api.line.me/v2/bot/message/push", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -41,8 +46,9 @@ async function linePush(token: string, to: string, text: string) {
       },
       body: JSON.stringify({ to, messages: [{ type: "text", text }] }),
     });
+    return r.ok;
   } catch (_e) {
-    // 通知失敗してもDBの更新は取り消さない(ボードに結果が載るため)
+    return false; // 通知失敗してもDBの更新は取り消さない
   }
 }
 
@@ -55,8 +61,14 @@ Deno.serve(async (req) => {
   const action = String(body.action ?? "");
   const payload = body.payload ?? {};
 
+  const token = Deno.env.get("LINE_CHANNEL_ACCESS_TOKEN") ?? "";
+
+  // notify_owner / nag_unconfirmed は注文フォームやcronから呼ぶためパスワード不要。
+  // いたずら対策は action 側で行う(新規注文のみ・再通知は間隔を空ける)
+  const isPublicAction =
+    action === "notify_owner" || action === "nag_unconfirmed";
   const boardPassword = Deno.env.get("BOARD_PASSWORD") ?? "";
-  if (!boardPassword || password !== boardPassword) {
+  if (!isPublicAction && (!boardPassword || password !== boardPassword)) {
     return json({ error: "unauthorized" }, 401);
   }
 
@@ -70,7 +82,102 @@ Deno.serve(async (req) => {
     case "ping":
       return json({ ok: true });
 
-    // 注文確定(時間変更があればLINE通知)
+    // ── 新規注文を店主のLINEへ即通知(注文フォームから呼ばれる) ──
+    case "notify_owner": {
+      const id = Number(payload.id);
+      if (!id) return json({ error: "bad payload" }, 400);
+
+      const { data: o } = await db
+        .from("takeout_orders")
+        .select(
+          "id,status,customer_name,items,total,note,pickup_at,line_user_id,created_at,owner_notified_at"
+        )
+        .eq("id", id)
+        .single();
+      if (!o) return json({ ok: true, skipped: "not found" });
+      if (o.status !== "new") return json({ ok: true, skipped: "not new" });
+
+      const ageMs = Date.now() - new Date(o.created_at).getTime();
+      if (ageMs > 15 * 60000) return json({ ok: true, skipped: "too old" });
+      if (
+        o.owner_notified_at &&
+        Date.now() - new Date(o.owner_notified_at).getTime() < 4 * 60000
+      ) {
+        return json({ ok: true, skipped: "recently notified" });
+      }
+
+      const items = Array.isArray(o.items)
+        ? o.items
+        : (() => {
+            try {
+              return JSON.parse(String(o.items));
+            } catch (_e) {
+              return [];
+            }
+          })();
+      const lines = (items as { name: string; qty: number }[])
+        .map((i) => `・${i.name} ×${i.qty}`)
+        .join("\n");
+      const note = o.note ? `📝${o.note}\n` : "";
+      const sent = await linePush(
+        token,
+        Deno.env.get("OWNER_LINE_USER_ID") ?? "",
+        "🍳新規注文 #" + o.id + "\n" +
+          `⏰希望 ${hmJST(o.pickup_at)} ・ ${o.customer_name}様 ・ ¥${Number(
+            o.total
+          ).toLocaleString()}\n` +
+          lines + "\n" +
+          note +
+          "↓タップして受注ボードで確定\n" +
+          BOARD_URL
+      );
+      if (sent) {
+        await db
+          .from("takeout_orders")
+          .update({ owner_notified_at: new Date().toISOString() })
+          .eq("id", id);
+      }
+      return json({ ok: true, sent });
+    }
+
+    // ── 未確認注文の再通知(電話の着信のように、確定するまで訴え続ける) ──
+    // pg_cron から毎分呼ばれる。前回通知から2分以上経った「new」の注文に
+    // ⚠️再通知を送る。注文発生から60分で打ち切り(閉店後の暴走防止)。
+    case "nag_unconfirmed": {
+      const ownerId = Deno.env.get("OWNER_LINE_USER_ID") ?? "";
+      const { data: stale } = await db
+        .from("takeout_orders")
+        .select("id,customer_name,pickup_at,owner_notified_at")
+        .eq("status", "new")
+        .gte("created_at", new Date(Date.now() - 60 * 60000).toISOString())
+        .order("id")
+        .limit(5);
+      let sent = 0;
+      for (const o of stale ?? []) {
+        const last = o.owner_notified_at
+          ? new Date(o.owner_notified_at).getTime()
+          : 0;
+        if (Date.now() - last < 2 * 60000) continue;
+        const ok = await linePush(
+          token,
+          ownerId,
+          `⚠️まだ未確認の注文があります #${o.id}\n` +
+            `希望 ${hmJST(o.pickup_at)} ・ ${o.customer_name}様\n` +
+            `↓タップして受注ボードで確定\n` +
+            BOARD_URL
+        );
+        if (ok) {
+          sent++;
+          await db
+            .from("takeout_orders")
+            .update({ owner_notified_at: new Date().toISOString() })
+            .eq("id", o.id);
+        }
+      }
+      return json({ ok: true, sent });
+    }
+
+    // 注文確定(時間変更があればお客のLINEへ調整通知)
     case "confirm_order": {
       const id = Number(payload.id);
       const pickupAt = new Date(payload.pickup_at);
@@ -96,7 +203,7 @@ Deno.serve(async (req) => {
       const notified = timeChanged && !!before.line_user_id;
       if (notified) {
         await linePush(
-          Deno.env.get("LINE_CHANNEL_ACCESS_TOKEN") ?? "",
+          token,
           before.line_user_id,
           "いつもありがとうございます、鳥とんです。\n" +
             `大変申し訳ございませんが、混雑のため受取時間を ${hmJST(

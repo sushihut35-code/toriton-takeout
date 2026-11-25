@@ -323,3 +323,26 @@ body {
   margin-top: 12px;
   line-height: 1.6;
 }
+
+/* ── スマホ表示(ポケット内 lt 受注ボード運用) ── */
+@media (max-width: 640px) {
+  .b-header {
+    padding: 12px 14px;
+  }
+  .b-title {
+    font-size: 17px;
+  }
+  .b-section {
+    padding: 14px 12px 2px;
+  }
+  .cards {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .c-act {
+    flex-wrap: wrap;
+  }
+  .c-btn {
+    flex: 1;
+  }
+}
