@@ -510,30 +510,22 @@ function cardHtml(o) {
       <div class="c-act">
         <select class="c-time" data-time="${o.id}">${opts}</select>
         <button class="c-btn c-btn--ok" data-confirm="${o.id}">変更確定</button>
-        <button class="c-btn c-btn--done" data-done="${o.id}">受渡済✔</button>
       </div>
     </div>`;
 }
 
 function renderOrders() {
-  const groups = { new: [], accepted: [], done: [] };
+  const groups = { new: [], accepted: [] };
   orders.forEach((o) => {
-    (groups[o.status] || groups.done).push(o);
+    if (o.status === 'new') groups.new.push(o);
+    else if (o.status === 'accepted') groups.accepted.push(o);
   });
   groups.accepted.sort((a, b) => new Date(a.pickup_at) - new Date(b.pickup_at));
-  groups.done.sort((a, b) => new Date(a.pickup_at) - new Date(b.pickup_at));
 
   $('orders-new').innerHTML = groups.new.map(cardHtml).join('');
   $('orders-new-empty').hidden = groups.new.length > 0;
   $('orders-accepted').innerHTML = groups.accepted.map(cardHtml).join('');
   $('orders-accepted-empty').hidden = groups.accepted.length > 0;
-  $('orders-done').innerHTML = groups.done
-    .map(
-      (o) =>
-        `<div class="done-row"><b>#${o.id}</b> ${dateSlotLabel(o.pickup_at)} ${esc(o.customer_name)} ${totalLabel(o)}</div>`
-    )
-    .join('');
-  $('orders-done-empty').hidden = groups.done.length > 0;
 }
 
 /* ── アクション ── */
@@ -555,15 +547,6 @@ async function confirmOrder(id) {
   refresh();
 }
 
-async function setDone(id) {
-  const { ok, data } = await callAction('set_done', { id });
-  if (!ok) {
-    alert('更新に失敗しました: ' + (data.error || 'エラー'));
-    return;
-  }
-  refresh();
-}
-
 async function toggleSlot(iso) {
   const stopped = stops.has(minuteKey(iso));
   const { ok, data } = await callAction(
@@ -580,11 +563,10 @@ async function toggleSlot(iso) {
 /* ── イベント ── */
 document.addEventListener('click', (ev) => {
   const t = ev.target.closest(
-    '[data-confirm],[data-done],[data-slot],[data-cal],[data-calnav],[data-mtoggle],[data-medit],[data-mdel]'
+    '[data-confirm],[data-slot],[data-cal],[data-calnav],[data-mtoggle],[data-medit],[data-mdel]'
   );
   if (!t) return;
   if (t.dataset.confirm) confirmOrder(Number(t.dataset.confirm));
-  if (t.dataset.done) setDone(Number(t.dataset.done));
   if (t.dataset.slot) toggleSlot(t.dataset.slot);
   if (t.dataset.cal) toggleDateHoliday(t.dataset.cal);
   if (t.dataset.calnav) {
