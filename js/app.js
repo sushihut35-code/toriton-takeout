@@ -240,6 +240,14 @@ function closeCart() {
    ============================================ */
 async function submitOrder() {
   if (cart.size === 0) return;
+
+  // 電話番号チェック(ハイフン・空白は除いて9〜15桁)
+  const phoneDigits = ($('phone-input').value || '').replace(/[\s\-()]/g, '');
+  if (!/^\d{9,15}$/.test(phoneDigits)) {
+    alert('電話番号を入力してください(半角数字・ハイフンなしでもOKです)');
+    return;
+  }
+
   const btn = $('submit-btn');
   btn.disabled = true;
   btn.textContent = '送信中…';
@@ -269,6 +277,7 @@ async function submitOrder() {
     const order = {
       line_user_id: profile.userId || '',
       customer_name: $('name-input').value.trim() || '名前なし',
+      phone: $('phone-input').value.trim() || null,
       pickup_at: new Date($('pickup-select').value).toISOString(),
       items,
       total,

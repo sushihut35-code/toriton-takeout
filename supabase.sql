@@ -9,6 +9,7 @@ create table if not exists public.takeout_orders (
   created_at    timestamptz not null default now(),
   line_user_id  text not null default '',      -- 注文した客のLINEユーザーID
   customer_name text not null,                 -- お名前
+  phone         text,                          -- 電話番号
   pickup_at     timestamptz not null,          -- 受取希望時刻
   items         jsonb not null,                -- [{name, price, qty}, ...]
   total         int not null,                  -- 合計金額(円)
@@ -33,3 +34,8 @@ alter publication supabase_realtime add table public.takeout_orders;
 
 -- 動作確認用メモ:
 -- テーブルの中身は Supabase 管理画面の「Table Editor → takeout_orders」で見られる
+
+-- ============================================
+-- v1.1 電話番号列の追加(テーブル作成済みの環境はこちらだけ実行)
+-- ============================================
+alter table public.takeout_orders add column if not exists phone text;
