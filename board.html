@@ -78,15 +78,22 @@
 </section>
 
 <section class="b-section">
-  <h2 class="b-h2 b-h2--new">仮受付 <small>(時間を選んで確定)</small></h2>
+  <div class="new-banner" id="new-banner" hidden>
+    🔔 仮受付 <b id="new-count">0件</b> が入っています — 時間を選んで確定してください
+  </div>
+  <h2 class="b-h2 b-h2--new" id="new-h2">仮受付 <small>(時間を選んで確定)</small></h2>
   <div id="orders-new" class="cards"></div>
   <div id="orders-new-empty" class="empty">仮受付の注文はありません</div>
 </section>
 
 <section class="b-section">
-  <h2 class="b-h2">確定済み <small>(受取時刻順)</small></h2>
-  <div id="orders-accepted" class="cards"></div>
-  <div id="orders-accepted-empty" class="empty">確定済みの注文はありません</div>
+  <details class="b-details" id="accepted-details">
+    <summary>✅ 確定済み <span id="accepted-summary"></span></summary>
+    <div class="accepted-wrap">
+      <div id="orders-accepted" class="cards"></div>
+      <div id="orders-accepted-empty" class="empty">確定済みの注文はありません</div>
+    </div>
+  </details>
 </section>
 
 <!-- パスワードロック(初回のみ) -->

@@ -524,8 +524,17 @@ function renderOrders() {
 
   $('orders-new').innerHTML = groups.new.map(cardHtml).join('');
   $('orders-new-empty').hidden = groups.new.length > 0;
+
+  // 仮受付がある時は赤バナー+点滅、無い時は静かな小見出し
+  $('new-banner').hidden = groups.new.length === 0;
+  $('new-h2').hidden = groups.new.length > 0;
+  $('new-count').textContent = `${groups.new.length}件`;
+
   $('orders-accepted').innerHTML = groups.accepted.map(cardHtml).join('');
   $('orders-accepted-empty').hidden = groups.accepted.length > 0;
+  $('accepted-summary').textContent = groups.accepted.length
+    ? `─ ${groups.accepted.length}件(受取時刻順)`
+    : '';
 }
 
 /* ── アクション ── */

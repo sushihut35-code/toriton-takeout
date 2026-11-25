@@ -106,6 +106,31 @@ body {
   text-decoration: line-through;
 }
 
+/* ── 仮受付バナー(注文がある時だけ出る) ── */
+.new-banner {
+  background: linear-gradient(135deg, #ff5252, #c62828);
+  color: #fff;
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-size: 15px;
+  font-weight: 800;
+  text-align: center;
+  margin-bottom: 10px;
+  animation: newbanner 1.2s ease-in-out infinite;
+}
+.new-banner b {
+  font-size: 20px;
+  margin: 0 2px;
+}
+@keyframes newbanner {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 82, 82, 0.55); }
+  50% { box-shadow: 0 0 0 10px rgba(255, 82, 82, 0); }
+}
+
+.accepted-wrap {
+  padding: 10px 0 14px;
+}
+
 /* ── 定休日・臨時休業(折りたたみ) ── */
 .b-details {
   border: 1px dashed var(--line);
