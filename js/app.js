@@ -264,6 +264,21 @@ function renderSlots() {
 /* ============================================
    メニュー描画(24時間いつでも注文可)
    ============================================ */
+
+// 品目カードの右側:入ってなければ＋ボタン、入ってれば [− 数 ＋] カウンター
+function qtyControl(id) {
+  const cur = cart.get(id);
+  if (!cur) {
+    return `<button class="item__add" data-add="${id}" aria-label="1つ追加">＋</button>`;
+  }
+  return `
+    <div class="stepper">
+      <button class="stepper__btn" data-dec="${id}" aria-label="1つ減らす">−</button>
+      <span class="stepper__num">${cur.qty}</span>
+      <button class="stepper__btn" data-inc="${id}" aria-label="1つ増やす">＋</button>
+    </div>`;
+}
+
 function renderMenu() {
   const area = $('menu-area');
   const menu = normalizedMenu();
@@ -280,12 +295,13 @@ function renderMenu() {
         <div class="item__name">${item.name}</div>
         <div class="variants">
           ${item.variants
-            .map(
-              (v) => `
+            .map((v) => {
+              const c = cart.get(v.id);
+              return `
           <button class="variants__btn" data-add="${v.id}">
-            <b>${v.label}</b><span>¥${v.price.toLocaleString()}</span>
-          </button>`
-            )
+            <b>${v.label}</b><span>¥${v.price.toLocaleString()}${c ? ` ×${c.qty}` : ''}</span>
+          </button>`;
+            })
             .join('')}
         </div>
       </div>`
@@ -295,7 +311,7 @@ function renderMenu() {
           <div class="item__name">${item.name}</div>
           <div class="item__price">¥${item.price.toLocaleString()}</div>
         </div>
-        <button class="item__add" data-add="${item.id}" aria-label="${item.name}を追加">＋</button>
+        ${qtyControl(item.id)}
       </div>`
         )
         .join('')}
@@ -344,6 +360,7 @@ function refreshCartUI() {
   $('cart-count').textContent = `カート(${count}点)`;
   $('cart-total').textContent = `¥${cartTotal().toLocaleString()}`;
   renderCartRows();
+  renderMenu(); // カード上の個数カウンターも更新
 }
 
 function renderCartRows() {
