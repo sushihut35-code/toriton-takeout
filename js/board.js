@@ -254,10 +254,20 @@ function renderHolidays() {
 
   renderCalendar();
 
-  // 閉じたままでも分かるよう、見出しに現状の要約を表示
+  // 「今日」の状態を専用ボタンとバナーに反映
   const todayIso = isoOfMid(startOfToday());
+  const todayClosed = holidayDates.has(todayIso);
+  const btn = $('today-holiday-btn');
+  btn.textContent = todayClosed
+    ? '✅ 今日の臨時休業を解除する'
+    : '🌪 今日を臨時休業にする';
+  btn.classList.toggle('btn-today-closure--on', todayClosed);
+  $('closed-today-banner').hidden = !todayClosed;
+
+  // 閉じたままでも分かるよう、見出しに現状の要約を表示
   const upcoming = [...holidayDates].filter((d) => d >= todayIso).sort();
   const parts = [];
+  if (todayClosed) parts.push('⛔本日休業');
   if (holidayWeekly.size > 0) {
     parts.push(
       '毎週 ' + [...holidayWeekly].sort().map((i) => dayNames[i]).join('・')
@@ -489,6 +499,10 @@ document.addEventListener('click', (ev) => {
     if (calM > 11) { calM = 0; calY++; }
     renderCalendar();
   }
+});
+
+$('today-holiday-btn').addEventListener('click', () => {
+  toggleDateHoliday(isoOfMid(startOfToday()));
 });
 
 $('silence-btn').addEventListener('click', () => {

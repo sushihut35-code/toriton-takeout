@@ -143,6 +143,33 @@ body {
   padding-bottom: 12px;
 }
 
+/* ── 今日の臨時休業ボタン・本日休業バナー ── */
+.btn-today-closure {
+  align-self: flex-start;
+  background: #4a1f1f;
+  border: 2px solid var(--new);
+  color: #ffb3b3;
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.btn-today-closure--on {
+  background: #2f4a32;
+  border-color: var(--ok);
+  color: #bfe8c2;
+}
+.closed-today {
+  background: #4a1f1f;
+  color: #ffb3b3;
+  border-bottom: 2px solid var(--new);
+  text-align: center;
+  font-size: 14px;
+  font-weight: 800;
+  padding: 10px 12px;
+}
+
 /* ── 定休日カレンダー ── */
 .holiday-row {
   display: flex;
