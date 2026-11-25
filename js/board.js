@@ -49,26 +49,31 @@ function minuteKey(t) {
   return Math.floor(new Date(t).getTime() / 60000);
 }
 
-/* ── チャイム(Web Audio) ── */
+/* ── チャイム(Web Audio・強化版:3連音・大音量) ── */
 function beep() {
-  const o = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
-  o.frequency.value = 880;
-  o.connect(g);
-  g.connect(audioCtx.destination);
-  const t = audioCtx.currentTime;
-  g.gain.setValueAtTime(0.35, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
-  o.start(t);
-  o.stop(t + 0.35);
+  const t0 = audioCtx.currentTime;
+  const mk = (freq, start, dur, vol, type) => {
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = type || 'sine';
+    o.frequency.value = freq;
+    o.connect(g);
+    g.connect(audioCtx.destination);
+    g.gain.setValueAtTime(vol, t0 + start);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + start + dur);
+    o.start(t0 + start);
+    o.stop(t0 + start + dur);
+  };
+  mk(880, 0, 0.12, 0.9);          // ピッ
+  mk(880, 0.18, 0.12, 0.9);       // ピッ
+  mk(1175, 0.36, 0.4, 0.9, 'square'); // ピピー(高音・角波で目立たせる)
 }
 function startChime() {
   if (chiming || !audioCtx) return;
   chiming = true;
   const loop = () => {
-    beep();                       // ピッ
-    setTimeout(() => beep(), 500); // ピッ(2連)
-    chimeTimer = setTimeout(loop, 2500);
+    beep(); // 3連音
+    chimeTimer = setTimeout(loop, 2000);
   };
   loop();
 }
