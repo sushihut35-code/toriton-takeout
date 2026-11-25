@@ -35,6 +35,25 @@ function hmJST(iso: string): string {
   });
 }
 
+// 受取時刻のラベル(今日なら時刻のみ、それ以外は日付つき)
+function pickupLabelJST(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const hm = hmJST(iso);
+  const fmt = (x: Date) =>
+    x.toLocaleDateString("ja-JP", {
+      timeZone: "Asia/Tokyo",
+      month: "numeric",
+      day: "numeric",
+    });
+  if (fmt(d) === fmt(now)) return hm;
+  const wd = d.toLocaleDateString("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    weekday: "short",
+  });
+  return `${fmt(d)}(${wd}) ${hm}`;
+}
+
 async function linePush(token: string, to: string, text: string) {
   if (!token || !to) return false;
   try {
@@ -123,7 +142,7 @@ Deno.serve(async (req) => {
         token,
         Deno.env.get("OWNER_LINE_USER_ID") ?? "",
         "🍳新規注文 #" + o.id + "\n" +
-          `⏰希望 ${hmJST(o.pickup_at)} ・ ${o.customer_name}様 ・ ¥${Number(
+          `⏰希望 ${pickupLabelJST(o.pickup_at)} ・ ${o.customer_name}様 ・ ¥${Number(
             o.total
           ).toLocaleString()}\n` +
           lines + "\n" +
@@ -162,7 +181,7 @@ Deno.serve(async (req) => {
           token,
           ownerId,
           `⚠️まだ未確認の注文があります #${o.id}\n` +
-            `希望 ${hmJST(o.pickup_at)} ・ ${o.customer_name}様\n` +
+            `希望 ${pickupLabelJST(o.pickup_at)} ・ ${o.customer_name}様\n` +
             `↓タップして受注ボードで確定\n` +
             BOARD_URL
         );
@@ -206,7 +225,7 @@ Deno.serve(async (req) => {
           token,
           before.line_user_id,
           "いつもありがとうございます、鳥とんです。\n" +
-            `大変申し訳ございませんが、混雑のため受取時間を ${hmJST(
+            `大変申し訳ございませんが、混雑のため受取時間を ${pickupLabelJST(
               pickupAt.toISOString()
             )} に調整いたしました。\n` +
             "ご不便をおかけいたしますが、よろしくお願いいたします。"

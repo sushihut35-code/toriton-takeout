@@ -48,6 +48,58 @@ function startOfToday() {
 function minuteKey(t) {
   return Math.floor(new Date(t).getTime() / 60000);
 }
+function startOfDayLocal(d) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+// ── 営業日判定(毎週の定休 + 臨時休業) ──
+function isHoliday(mid) {
+  const day = mid.getDay();
+  if ((CONFIG.WEEKLY_HOLIDAYS || []).includes(day)) return true;
+  const iso =
+    mid.getFullYear() + '-' +
+    String(mid.getMonth() + 1).padStart(2, '0') + '-' +
+    String(mid.getDate()).padStart(2, '0');
+  return (CONFIG.HOLIDAYS || []).includes(iso);
+}
+function atHM(mid, hm) {
+  const [h, m] = hm.split(':').map(Number);
+  return new Date(mid.getFullYear(), mid.getMonth(), mid.getDate(), h, m, 0, 0);
+}
+function nextBusinessDay(fromMid) {
+  let d = new Date(fromMid.getTime());
+  for (let i = 0; i < 30; i++) {
+    d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+    if (!isHoliday(d)) return d;
+  }
+  return null;
+}
+function dayLabel(mid) {
+  const wd = ['日', '月', '火', '水', '木', '金', '土'][mid.getDay()];
+  return (mid.getMonth() + 1) + '/' + mid.getDate() + '(' + wd + ')';
+}
+
+// 受取時刻のラベル(今日なら時刻のみ、それ以外は日付つき)
+function dateSlotLabel(iso) {
+  const hm = hmJST(iso);
+  const d = startOfDayLocal(new Date(iso));
+  const diff = Math.round((d - startOfToday()) / 86400000);
+  if (diff === 0) return hm;
+  if (diff === 1) return '明日 ' + hm;
+  return dayLabel(d) + ' ' + hm;
+}
+
+// チップを出す日(今日が営業日でまだ営業中なら今日、そうでなければ次の営業日)
+function chipsDay() {
+  const todayMid = startOfToday();
+  if (
+    !isHoliday(todayMid) &&
+    Date.now() < atHM(todayMid, CONFIG.CLOSE_TIME).getTime()
+  ) {
+    return todayMid;
+  }
+  return nextBusinessDay(todayMid) || todayMid;
+}
 
 /* ── チャイム(Web Audio・強化版:3連音・大音量) ── */
 function beep() {
@@ -101,7 +153,7 @@ async function callAction(action, payload) {
 async function loadAll() {
   const today = startOfToday().toISOString();
   const [oRes, sRes] = await Promise.all([
-    db.from('takeout_orders').select('*').gte('created_at', today).order('id'),
+    db.from('takeout_orders').select('*').gte('pickup_at', today).order('pickup_at'),
     db.from('pickup_slot_stops').select('slot_at').gte('slot_at', today),
   ]);
   orders = oRes.data || [];
@@ -135,13 +187,13 @@ function markSeen(ids) {
   localStorage.setItem('toriton_seen', JSON.stringify([...seenIds]));
 }
 
-/* ── 時間帯チップ ── */
-function todaySlots() {
+/* ── 時間帯チップ(今日、営業終了後は次の営業日) ── */
+function daySlots(mid) {
   const out = [];
-  const open = hmDate(CONFIG.OPEN_TIME);
-  const close = hmDate(CONFIG.CLOSE_TIME);
+  const open = atHM(mid, CONFIG.OPEN_TIME);
+  const close = atHM(mid, CONFIG.CLOSE_TIME);
   const stepMs = CONFIG.SLOT_MINUTES * 60000;
-  let t = Math.ceil(open.getTime() / stepMs) * stepMs;
+  let t = open.getTime();
   while (t <= close.getTime()) {
     out.push(new Date(t));
     t += stepMs;
@@ -149,8 +201,10 @@ function todaySlots() {
   return out;
 }
 function renderSlots() {
+  const day = chipsDay();
   const now = Date.now();
-  $('slot-chips').innerHTML = todaySlots()
+  $('chips-date').textContent = `受付時間帯 ${dayLabel(day)}`;
+  $('slot-chips').innerHTML = daySlots(day)
     .map((d) => {
       const past = d.getTime() < now;
       const stopped = stops.has(minuteKey(d));
@@ -180,16 +234,24 @@ function totalLabel(o) {
 }
 
 function timeOptions(currentIso) {
-  // 現在〜閉店のスロット + 注文の現在時刻(含まれていなければ)
-  const close = hmDate(CONFIG.CLOSE_TIME);
+  // 今日の残り + 次の営業日 + 注文の現在時刻(含まれていなければ)
   const stepMs = CONFIG.SLOT_MINUTES * 60000;
-  const from = Date.now() - 90 * 60000; // 少し前から(調整中の注文のため)
+  const now = Date.now();
   const out = [];
-  let t = Math.ceil(from / stepMs) * stepMs;
-  while (t <= close.getTime()) {
-    out.push(new Date(t));
-    t += stepMs;
-  }
+  const pushDay = (mid) => {
+    const open = atHM(mid, CONFIG.OPEN_TIME);
+    const close = atHM(mid, CONFIG.CLOSE_TIME);
+    let t = open.getTime();
+    while (t <= close.getTime()) {
+      if (t >= now - 90 * 60000) out.push(new Date(t));
+      t += stepMs;
+    }
+  };
+  const todayMid = startOfToday();
+  if (!isHoliday(todayMid)) pushDay(todayMid);
+  const next = nextBusinessDay(todayMid);
+  if (next) pushDay(next);
+
   const cur = new Date(currentIso);
   if (!out.some((d) => minuteKey(d) === minuteKey(cur))) out.unshift(cur);
   out.sort((a, b) => a - b);
@@ -200,7 +262,7 @@ function cardHtml(o) {
   const opts = timeOptions(o.pickup_at)
     .map((d) => {
       const sel = minuteKey(d) === minuteKey(o.pickup_at) ? ' selected' : '';
-      return `<option value="${d.toISOString()}"${sel}>${hmLabel(d)}</option>`;
+      return `<option value="${d.toISOString()}"${sel}>${dateSlotLabel(d.toISOString())}</option>`;
     })
     .join('');
   const note = o.note ? `<div class="c-note">📝 ${esc(o.note)}</div>` : '';
@@ -211,7 +273,7 @@ function cardHtml(o) {
   if (o.status === 'new') {
     return `
     <div class="card card--new">
-      <div class="c-head"><span class="c-no">#${o.id}</span><span class="c-time-now">希望 ${hmJST(o.pickup_at)}</span></div>
+      <div class="c-head"><span class="c-no">#${o.id}</span><span class="c-time-now">希望 ${dateSlotLabel(o.pickup_at)}</span></div>
       <div class="c-name">${esc(o.customer_name)}${tel}</div>
       <div class="c-items">${itemsHtml(o)}</div>
       <div class="c-total">${totalLabel(o)}</div>
@@ -225,7 +287,7 @@ function cardHtml(o) {
   // accepted
   return `
     <div class="card card--ok">
-      <div class="c-head"><span class="c-no">#${o.id}</span><span class="c-time-now">受取 ${hmJST(o.pickup_at)}</span></div>
+      <div class="c-head"><span class="c-no">#${o.id}</span><span class="c-time-now">受取 ${dateSlotLabel(o.pickup_at)}</span></div>
       <div class="c-name">${esc(o.customer_name)}${tel}</div>
       <div class="c-items">${itemsHtml(o)}</div>
       <div class="c-total">${totalLabel(o)}</div>
@@ -253,7 +315,7 @@ function renderOrders() {
   $('orders-done').innerHTML = groups.done
     .map(
       (o) =>
-        `<div class="done-row"><b>#${o.id}</b> ${hmJST(o.pickup_at)} ${esc(o.customer_name)} ${totalLabel(o)}</div>`
+        `<div class="done-row"><b>#${o.id}</b> ${dateSlotLabel(o.pickup_at)} ${esc(o.customer_name)} ${totalLabel(o)}</div>`
     )
     .join('');
   $('orders-done-empty').hidden = groups.done.length > 0;

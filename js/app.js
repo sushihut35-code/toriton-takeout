@@ -52,36 +52,92 @@ function showBanner(text) {
 /* ============================================
    営業時間・受取時刻スロット
    ============================================ */
-function hmDate(hm) {
-  const [h, m] = hm.split(':').map(Number);
-  const d = new Date();
-  d.setHours(h, m, 0, 0);
-  return d;
+function startOfDay(d) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
-// 受取時刻の選択肢一覧。営業時間外なら 'CLOSED' を返す
-// ※stopMinutes(店による受付停止)に含まれる時間は除外
+// その日は休みか(毎週の定休 + 臨時休業)
+function isHoliday(dateAtMidnight) {
+  const day = dateAtMidnight.getDay();
+  if ((CONFIG.WEEKLY_HOLIDAYS || []).includes(day)) return true;
+  const iso =
+    dateAtMidnight.getFullYear() + '-' +
+    String(dateAtMidnight.getMonth() + 1).padStart(2, '0') + '-' +
+    String(dateAtMidnight.getDate()).padStart(2, '0');
+  return (CONFIG.HOLIDAYS || []).includes(iso);
+}
+
+function atHM(dateAtMidnight, hm) {
+  const [h, m] = hm.split(':').map(Number);
+  return new Date(
+    dateAtMidnight.getFullYear(),
+    dateAtMidnight.getMonth(),
+    dateAtMidnight.getDate(),
+    h, m, 0, 0
+  );
+}
+
+// 次の営業日(深夜0時のDate)。30日先まで探して無ければ null
+function nextBusinessDay(fromMidnight) {
+  let d = new Date(fromMidnight.getTime());
+  for (let i = 0; i < 30; i++) {
+    d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+    if (!isHoliday(d)) return d;
+  }
+  return null;
+}
+
+// 受取可能なスロット一覧(注文は24時間OK・受取は営業時間内・定休日はスキップ)
 function getSlots() {
   const now = new Date();
-  const open = hmDate(CONFIG.OPEN_TIME);
-  const close = hmDate(CONFIG.CLOSE_TIME);
-  if (now >= close) return 'CLOSED';
-
-  const start = new Date(
-    Math.max(now.getTime(), open.getTime()) + CONFIG.PREP_MINUTES * 60000
-  );
   const stepMs = CONFIG.SLOT_MINUTES * 60000;
-  let t = Math.ceil(start.getTime() / stepMs) * stepMs;
-  const limit = Math.min(
-    now.getTime() + CONFIG.MAX_HOURS_AHEAD * 3600000,
-    close.getTime()
-  );
   const out = [];
-  while (t <= limit) {
-    if (!stopMinutes.has(Math.floor(t / 60000))) out.push(new Date(t));
-    t += stepMs;
+
+  // 今日:営業日でまだ閉店前なら、これからの分だけ
+  const todayMid = startOfDay(now);
+  if (!isHoliday(todayMid)) {
+    const open = atHM(todayMid, CONFIG.OPEN_TIME);
+    const close = atHM(todayMid, CONFIG.CLOSE_TIME);
+    if (now.getTime() < close.getTime()) {
+      const start = new Date(
+        Math.max(now.getTime(), open.getTime()) + CONFIG.PREP_MINUTES * 60000
+      );
+      let t = Math.ceil(start.getTime() / stepMs) * stepMs;
+      while (t <= close.getTime()) {
+        out.push(new Date(t));
+        t += stepMs;
+      }
+    }
   }
-  return out.length ? out : 'CLOSED';
+
+  // 今日の受取がもう無理(夜間・休み)→ 次の営業日まるごと
+  if (out.length === 0) {
+    const next = nextBusinessDay(todayMid);
+    if (next) {
+      const open = atHM(next, CONFIG.OPEN_TIME);
+      const close = atHM(next, CONFIG.CLOSE_TIME);
+      let t = open.getTime();
+      while (t <= close.getTime()) {
+        out.push(new Date(t));
+        t += stepMs;
+      }
+    }
+  }
+
+  // 店が受付停止した時間帯は除く
+  return out.filter((d) => !stopMinutes.has(Math.floor(d.getTime() / 60000)));
+}
+
+// 選択肢のラベル(今日は時刻のみ、それ以外は日付つき)
+function slotLabel(d) {
+  const hm = hmLabel(d);
+  const todayMid = startOfDay(new Date());
+  const diff = Math.round((startOfDay(d) - todayMid) / 86400000);
+  if (diff === 0) return hm;
+  if (diff === 1) return '明日 ' + hm;
+  if (diff === 2) return '明後日 ' + hm;
+  const wd = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
+  return (d.getMonth() + 1) + '/' + d.getDate() + '(' + wd + ') ' + hm;
 }
 
 // 店が受付停止した時間帯をSupabaseから読み込む
@@ -113,35 +169,21 @@ function hmLabel(d) {
 }
 
 function labelFromIso(iso) {
-  return hmLabel(new Date(iso));
+  return slotLabel(new Date(iso));
 }
 
 function renderSlots() {
   const sel = $('pickup-select');
-  const slots = getSlots();
-  if (slots === 'CLOSED') {
-    sel.innerHTML = '<option>本日受付終了</option>';
-    return;
-  }
-  sel.innerHTML = slots
-    .map((d) => `<option value="${d.toISOString()}">${hmLabel(d)}</option>`)
+  sel.innerHTML = getSlots()
+    .map((d) => `<option value="${d.toISOString()}">${slotLabel(d)}</option>`)
     .join('');
 }
 
 /* ============================================
-   メニュー描画
+   メニュー描画(24時間いつでも注文可)
    ============================================ */
 function renderMenu() {
   const area = $('menu-area');
-  if (getSlots() === 'CLOSED') {
-    area.innerHTML = `
-      <div class="closed">
-        <div class="closed__emoji">🌙</div>
-        <div class="closed__title">本日の注文受付は終了しました</div>
-        <p class="closed__sub">受付時間 ${CONFIG.OPEN_TIME} 〜 ${CONFIG.CLOSE_TIME}</p>
-      </div>`;
-    return;
-  }
   area.innerHTML = MENU.categories
     .map(
       (cat) => `
