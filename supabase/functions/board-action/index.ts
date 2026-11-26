@@ -85,12 +85,17 @@ async function getWebPush(): Promise<any> {
   webpushTried = true;
   try {
     const priv = Deno.env.get("VAPID_PRIVATE_KEY") ?? "";
-    if (!priv) return null; // シークレット未設定 → LINEフォールバックのみ
+    if (!priv) {
+      console.error("[push] VAPID_PRIVATE_KEY が未設定(LINE予備のみで動作)");
+      return null;
+    }
     const mod: any = await import("npm:web-push@3.6.7");
     const wp = mod.default ?? mod;
     wp.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, priv);
     webpushLib = wp;
-  } catch (_e) {
+    console.log("[push] web-pushライブラリの読み込みOK");
+  } catch (e) {
+    console.error("[push] web-pushの初期化に失敗:", e);
     webpushLib = null; // ライブラリが動かない環境でもLINEで凌ぐ
   }
   return webpushLib;
@@ -105,7 +110,14 @@ async function webPushAll(
 ): Promise<number> {
   const wp = await getWebPush();
   if (!wp) return 0;
-  const { data: subs } = await db.from("push_subs").select("endpoint,p256dh,auth");
+  const { data: subs, error: subsErr } = await db
+    .from("push_subs")
+    .select("endpoint,p256dh,auth");
+  if (subsErr) {
+    console.error("[push] push_subsの読み取り失敗:", subsErr.message);
+    return 0;
+  }
+  console.log(`[push] 登録端末=${(subs ?? []).length}件`);
   let sent = 0;
   for (const s of subs ?? []) {
     try {
@@ -116,6 +128,11 @@ async function webPushAll(
       );
       sent++;
     } catch (e: any) {
+      console.error(
+        "[push] 送信失敗:",
+        (e && e.statusCode) || "",
+        (e && (e.body || e.message)) || e
+      );
       const code = e && e.statusCode;
       if (code === 404 || code === 410) {
         // 通知登録が古い端末は自動掃除
@@ -123,6 +140,7 @@ async function webPushAll(
       }
     }
   }
+  console.log(`[push] 送信OK=${sent}件 / ${title}`);
   return sent;
 }
 
@@ -203,6 +221,7 @@ Deno.serve(async (req) => {
         "↓タップして受注ボードで確定";
       // まずWeb Push(無料)→届く端末がなければLINEへ(予備)
       const pushed = await webPushAll(db, title, body, "toriton-new");
+      console.log(`[notify] #${id} web=${pushed} ${pushed ? "(LINE不使用)" : "→LINE予備へ"}`);
       const sent =
         pushed > 0 ||
         (await linePush(
