@@ -16,6 +16,7 @@ let orders = [];
 let stops = new Set(); // 分単位のepochのセット
 let holidayWeekly = new Set(); // 毎週の定休(0=日..6=土)
 let holidayDates = new Set(); // 臨時休業('YYYY-MM-DD')
+let specialHours = new Map(); // 特別営業時間 'YYYY-MM-DD' -> {open, close}
 let menuItems = [];           // メニュー一覧(Supabase)
 let menuEditingId = null;     // 編集中のメニューID(null=新規追加)
 let refreshTimer = null;
@@ -100,12 +101,19 @@ function dateSlotLabel(iso) {
   return dayLabel(d) + ' ' + hm;
 }
 
+// ある日の営業時間(特別営業時間があればそれ、無ければ通常)
+function hoursFor(mid) {
+  const s = specialHours.get(isoOfMid(mid));
+  if (s) return { open: s.open, close: s.close };
+  return { open: CONFIG.OPEN_TIME, close: CONFIG.CLOSE_TIME };
+}
+
 // チップを出す日(今日が営業日でまだ営業中なら今日、そうでなければ次の営業日)
 function chipsDay() {
   const todayMid = startOfToday();
   if (
     !isHoliday(todayMid) &&
-    Date.now() < atHM(todayMid, CONFIG.CLOSE_TIME).getTime()
+    Date.now() < atHM(todayMid, hoursFor(todayMid).close).getTime()
   ) {
     return todayMid;
   }
@@ -163,15 +171,22 @@ async function callAction(action, payload) {
 /* ── データ取得 ── */
 async function loadAll() {
   const today = startOfToday().toISOString();
-  const [oRes, sRes, hRes, mRes] = await Promise.all([
+  const [oRes, sRes, hRes, mRes, spRes] = await Promise.all([
     db.from('takeout_orders').select('*').gte('pickup_at', today).order('pickup_at'),
     db.from('pickup_slot_stops').select('slot_at').gte('slot_at', today),
     db.from('shop_holidays').select('kind,day_of_week,holiday_date'),
     db.from('menu_items').select('*').order('sort_no'),
+    db.from('special_hours').select('*'),
   ]);
   orders = oRes.data || [];
   stops = new Set((sRes.data || []).map((r) => minuteKey(r.slot_at)));
   menuItems = mRes.data || [];
+  specialHours = new Map();
+  (spRes.data || []).forEach((r) => {
+    if (r.date) {
+      specialHours.set(String(r.date), { open: r.open_time, close: r.close_time });
+    }
+  });
   holidayWeekly = new Set();
   holidayDates = new Set();
   (hRes.data || []).forEach((r) => {
@@ -216,8 +231,9 @@ function markSeen(ids) {
 /* ── 時間帯チップ(今日、営業終了後は次の営業日) ── */
 function daySlots(mid) {
   const out = [];
-  const open = atHM(mid, CONFIG.OPEN_TIME);
-  const close = atHM(mid, CONFIG.CLOSE_TIME);
+  const h = hoursFor(mid);
+  const open = atHM(mid, h.open);
+  const close = atHM(mid, h.close);
   const stepMs = CONFIG.SLOT_MINUTES * 60000;
   let t = open.getTime();
   while (t <= close.getTime()) {
@@ -256,6 +272,7 @@ let calM; // カレンダー表示中の月(0-11)
 
 function renderHolidays() {
   renderCalendar();
+  renderSpecialHours();
 
   // 「今日」の状態を専用ボタンとバナーに反映
   const todayIso = isoOfMid(startOfToday());
@@ -300,6 +317,7 @@ function renderCalendar() {
     const isWk = holidayWeekly.has(dt.getDay());
     const cls = ['cal-day'];
     if (isDate) cls.push('cal-day--closed');
+    else if (specialHours.has(iso)) cls.push('cal-day--special');
     else if (isWk) cls.push('cal-day--weekly');
     if (iso === todayIso) cls.push('cal-day--today');
     if (past) cls.push('cal-day--past');
@@ -319,6 +337,63 @@ async function toggleDateHoliday(iso) {
   const { ok, data } = await callAction(action, { date: iso });
   if (!ok) {
     alert('休業日の変更に失敗しました: ' + (data.error || 'エラー'));
+    return;
+  }
+  refresh();
+}
+
+/* ── 特別営業時間(年末年始など) ── */
+function renderSpecialHours() {
+  const todayIso = isoOfMid(startOfToday());
+  const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
+  const rows = [...specialHours.entries()]
+    .filter(([d]) => d >= todayIso)
+    .sort((a, b) => (a[0] < b[0] ? -1 : 1));
+  $('sh-list').innerHTML = rows.length
+    ? rows
+        .map(([d, h]) => {
+          const dt = new Date(d + 'T00:00:00');
+          const wd = dayNames[dt.getDay()];
+          const label =
+            `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}(${wd}) ` +
+            `${h.open}〜${h.close}`;
+          return `<span class="holiday-pill holiday-pill--blue">${label}<button data-shdel="${d}" aria-label="削除">×</button></span>`;
+        })
+        .join('')
+    : '<span class="holiday-empty">特別営業時間の設定はありません(通常 15:00〜19:00)</span>';
+}
+
+async function saveSpecialHours() {
+  const date = $('sh-date').value;
+  const open = $('sh-open').value;
+  const close = $('sh-close').value;
+  if (!date || !open || !close) {
+    alert('日付と開店・閉店の時刻をすべて入力してください');
+    return;
+  }
+  if (open >= close) {
+    alert('閉店時刻は開店時刻より後にしてください');
+    return;
+  }
+  const { ok, data } = await callAction('special_hours_save', {
+    date,
+    open_time: open,
+    close_time: close,
+  });
+  if (!ok) {
+    alert('保存に失敗しました: ' + (data.error || 'エラー'));
+    return;
+  }
+  $('sh-date').value = '';
+  $('sh-open').value = '';
+  $('sh-close').value = '';
+  refresh();
+}
+
+async function deleteSpecialHours(dateIso) {
+  const { ok, data } = await callAction('special_hours_delete', { date: dateIso });
+  if (!ok) {
+    alert('削除に失敗しました: ' + (data.error || 'エラー'));
     return;
   }
   refresh();
@@ -454,8 +529,9 @@ function timeOptions(currentIso) {
   const now = Date.now();
   const out = [];
   const pushDay = (mid) => {
-    const open = atHM(mid, CONFIG.OPEN_TIME);
-    const close = atHM(mid, CONFIG.CLOSE_TIME);
+    const h = hoursFor(mid);
+    const open = atHM(mid, h.open);
+    const close = atHM(mid, h.close);
     let t = open.getTime();
     while (t <= close.getTime()) {
       if (t >= now - 90 * 60000) out.push(new Date(t));
@@ -572,7 +648,7 @@ async function toggleSlot(iso) {
 /* ── イベント ── */
 document.addEventListener('click', (ev) => {
   const t = ev.target.closest(
-    '[data-confirm],[data-slot],[data-cal],[data-calnav],[data-mtoggle],[data-medit],[data-mdel]'
+    '[data-confirm],[data-slot],[data-cal],[data-calnav],[data-mtoggle],[data-medit],[data-mdel],[data-shdel]'
   );
   if (!t) return;
   if (t.dataset.confirm) confirmOrder(Number(t.dataset.confirm));
@@ -587,7 +663,9 @@ document.addEventListener('click', (ev) => {
   if (t.dataset.mtoggle) menuToggle(Number(t.dataset.mtoggle));
   if (t.dataset.medit) menuEdit(Number(t.dataset.medit));
   if (t.dataset.mdel) menuDelete(Number(t.dataset.mdel));
+  if (t.dataset.shdel) deleteSpecialHours(t.dataset.shdel);
 });
+$('sh-save-btn').addEventListener('click', saveSpecialHours);
 $('menu-save-btn').addEventListener('click', menuSave);
 $('menu-cancel-btn').addEventListener('click', menuEditReset);
 

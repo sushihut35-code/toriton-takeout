@@ -11,7 +11,16 @@ let profile = { displayName: '', userId: '' };
 let stopMinutes = new Set(); // 店が受付停止した時間帯(分単位epoch)
 let holidayWeekly = new Set(); // 毎週の定休(0=日..6=土)
 let holidayDates = new Set(); // 臨時休業('YYYY-MM-DD')
+let specialHours = new Map(); // 特別営業時間 'YYYY-MM-DD' -> {open, close}
 let MENU_ROWS = null; // Supabaseのメニュー管理データ(nullならmenu.jsの予備を使う)
+
+function isoOfMid(mid) {
+  return (
+    mid.getFullYear() + '-' +
+    String(mid.getMonth() + 1).padStart(2, '0') + '-' +
+    String(mid.getDate()).padStart(2, '0')
+  );
+}
 
 // カテゴリー名 → 絵文字(見た目のお楽しみ。無ければ付かないだけ)
 const CATEGORY_EMOJI = {
@@ -142,6 +151,32 @@ function nextBusinessDay(fromMidnight) {
   return null;
 }
 
+// 特別営業時間をSupabaseから読み込む(読めなければ通常時間のまま)
+async function loadSpecialHours() {
+  if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY || !window.supabase) return;
+  try {
+    const db = window.supabase.createClient(
+      CONFIG.SUPABASE_URL,
+      CONFIG.SUPABASE_ANON_KEY
+    );
+    const { data } = await db.from('special_hours').select('date,open_time,close_time');
+    (data || []).forEach((r) => {
+      if (r.date) {
+        specialHours.set(String(r.date), { open: r.open_time, close: r.close_time });
+      }
+    });
+  } catch (e) {
+    // 読み取り失敗時は config.js の通常時間を使用
+  }
+}
+
+// ある日の営業時間(特別営業時間があればそれ、無ければ通常)
+function hoursFor(mid) {
+  const s = specialHours.get(isoOfMid(mid));
+  if (s) return { open: s.open, close: s.close };
+  return { open: CONFIG.OPEN_TIME, close: CONFIG.CLOSE_TIME };
+}
+
 // 受取可能なスロット一覧(注文は24時間OK・受取は営業時間内・定休日はスキップ)
 function getSlots() {
   const now = new Date();
@@ -151,8 +186,9 @@ function getSlots() {
   // 今日:営業日でまだ閉店前なら、これからの分だけ
   const todayMid = startOfDay(now);
   if (!isHoliday(todayMid)) {
-    const open = atHM(todayMid, CONFIG.OPEN_TIME);
-    const close = atHM(todayMid, CONFIG.CLOSE_TIME);
+    const h = hoursFor(todayMid);
+    const open = atHM(todayMid, h.open);
+    const close = atHM(todayMid, h.close);
     if (now.getTime() < close.getTime()) {
       const start = new Date(
         Math.max(now.getTime(), open.getTime()) + CONFIG.PREP_MINUTES * 60000
@@ -169,8 +205,9 @@ function getSlots() {
   if (out.length === 0) {
     const next = nextBusinessDay(todayMid);
     if (next) {
-      const open = atHM(next, CONFIG.OPEN_TIME);
-      const close = atHM(next, CONFIG.CLOSE_TIME);
+      const h = hoursFor(next);
+      const open = atHM(next, h.open);
+      const close = atHM(next, h.close);
       let t = open.getTime();
       while (t <= close.getTime()) {
         out.push(new Date(t));
@@ -555,6 +592,7 @@ async function prefillCustomerInfo() {
   await Promise.all([
     loadStops(),
     loadHolidays(),
+    loadSpecialHours(),
     loadMenu(),
     prefillCustomerInfo(),
   ]);

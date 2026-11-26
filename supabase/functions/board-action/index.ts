@@ -334,6 +334,34 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
+    // ── 特別営業時間(年末年始など) ──
+    case "special_hours_save": {
+      const date = String(payload.date ?? "");
+      const open = String(payload.open_time ?? "");
+      const close = String(payload.close_time ?? "");
+      const hm = /^([01]\d|2[0-3]):[0-5]\d$/;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !hm.test(open) || !hm.test(close)) {
+        return json({ error: "bad payload" }, 400);
+      }
+      if (open >= close) return json({ error: "開店より閉店が早いです" }, 400);
+      await db.from("special_hours").delete().eq("date", date);
+      const { error } = await db
+        .from("special_hours")
+        .insert({ date, open_time: open, close_time: close });
+      if (error) return json({ error: error.message }, 500);
+      return json({ ok: true });
+    }
+
+    case "special_hours_delete": {
+      const date = String(payload.date ?? "");
+      const { error } = await db
+        .from("special_hours")
+        .delete()
+        .eq("date", date);
+      if (error) return json({ error: error.message }, 500);
+      return json({ ok: true });
+    }
+
     // 時間帯ストップ(お客の選択肢から消す)
     case "slot_stop": {
       const slotAt = new Date(payload.slot_at);

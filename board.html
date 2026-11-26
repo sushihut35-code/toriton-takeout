@@ -50,7 +50,18 @@
           <button data-calnav="1" aria-label="次の月">›</button>
         </div>
         <div class="cal-grid" id="cal-grid"></div>
-        <div class="cal-legend">🟥 休業日(タップで設定/解除)・今日は枠線</div>
+        <div class="cal-legend">🟥 休業日(タップで設定/解除)・🔵 特別営業時間あり・今日は枠線</div>
+      </div>
+      <div class="special-hours">
+        <div class="holiday-label">特別営業時間(年末年始など・その日だけ時間変更):</div>
+        <div class="sh-form">
+          <input type="date" id="sh-date">
+          <input type="time" id="sh-open" aria-label="開店時刻">
+          <span class="sh-tilde">〜</span>
+          <input type="time" id="sh-close" aria-label="閉店時刻">
+          <button id="sh-save-btn" class="c-btn c-btn--ok">設定</button>
+        </div>
+        <div id="sh-list" class="holiday-list"></div>
       </div>
       <button id="today-holiday-btn" class="btn-today-closure">🌪 今日を臨時休業にする</button>
     </div>

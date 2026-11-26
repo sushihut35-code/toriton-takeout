@@ -147,3 +147,19 @@ insert into public.menu_items (category, name, price, sort_no) values
   ('サイドメニュー', 'カリカリチーズ', 400, 8),
   ('サイドメニュー', '魚のフライ', 500, 9)
 on conflict (category, name) do nothing;
+
+-- ============================================
+-- v1.6 特別営業時間(年末年始などの日付指定)
+-- ============================================
+
+create table if not exists public.special_hours (
+  date       date primary key,          -- 対象日
+  open_time  text not null,             -- 開店 '14:00' の形式
+  close_time text not null,             -- 閉店 '17:00' の形式
+  created_at timestamptz not null default now()
+);
+alter table public.special_hours enable row level security;
+
+-- フォーム側は読み取りだけ(設定はエッジファンクション経由)
+create policy "anon select special_hours" on public.special_hours
+  for select to anon using (true);
