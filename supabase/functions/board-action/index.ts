@@ -84,7 +84,12 @@ async function getWebPush(): Promise<any> {
   if (webpushTried) return webpushLib;
   webpushTried = true;
   try {
-    const priv = Deno.env.get("VAPID_PRIVATE_KEY") ?? "";
+    // 貼り付け事故対策:空白・改行・引用符・"Value:"等の前置き・末尾の=を掃除
+    const privRaw = Deno.env.get("VAPID_PRIVATE_KEY") ?? "";
+    const priv = privRaw
+      .replace(/[\s"'`]/g, "")
+      .replace(/^(Value:|VAPID_PRIVATE_KEY[=:]?)/i, "")
+      .replace(/=+$/, "");
     if (!priv) {
       console.error("[push] VAPID_PRIVATE_KEY が未設定(LINE予備のみで動作)");
       return null;
