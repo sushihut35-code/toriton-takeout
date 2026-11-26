@@ -447,7 +447,6 @@ async function submitOrder() {
       pickup_at: new Date($('pickup-select').value).toISOString(),
       items,
       total,
-      note: $('note-input').value.trim() || null,
     };
 
     const { data, error } = await db
