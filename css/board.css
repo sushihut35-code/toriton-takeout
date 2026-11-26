@@ -188,6 +188,18 @@ body {
   padding: 10px 0 14px;
 }
 
+/* ── 着信通知パネル ── */
+.push-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 520px;
+}
+.push-status {
+  font-size: 13px;
+  color: var(--sub);
+}
+
 /* ── 定休日・臨時休業(折りたたみ) ── */
 .b-details {
   border: 1px dashed var(--line);

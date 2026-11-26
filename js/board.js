@@ -695,7 +695,9 @@ $('menu-cancel-btn').addEventListener('click', menuEditReset);
 
 $('settings-btn').addEventListener('click', () => {
   $('settings-overlay').hidden = false;
+  updatePushStatus();
 });
+$('push-enable-btn').addEventListener('click', enablePush);
 $('settings-close').addEventListener('click', () => {
   $('settings-overlay').hidden = true;
 });
@@ -731,10 +733,88 @@ $('arm-btn').addEventListener('click', () => {
   startBoard();
 });
 
+/* ── Web Push通知(ポケットでも無料で鳴る) ── */
+function urlBase64ToUint8Array(b64) {
+  const padding = '='.repeat((4 - (b64.length % 4)) % 4);
+  const base64 = (b64 + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  const arr = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+  return arr;
+}
+
+async function updatePushStatus() {
+  const el = $('push-status');
+  if (!el) return;
+  try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      el.textContent =
+        '⚠️ この画面は通知に非対応です(iPhoneはホーム画面の「鳥とんボード」アプリから開いてください)';
+      return;
+    }
+    const perm = Notification.permission;
+    if (perm === 'denied') {
+      el.textContent = '❌ 通知が拒否されています(端末の設定→通知で許可してください)';
+      return;
+    }
+    const reg = await navigator.serviceWorker.getRegistration();
+    const sub = reg ? await reg.pushManager.getSubscription() : null;
+    if (sub && perm === 'granted') {
+      el.textContent = '✅ 有効 — この端末のロック画面に届きます';
+      return;
+    }
+    el.textContent = '未設定(上のボタンで有効にできます)';
+  } catch (e) {
+    el.textContent = '状態取得できず';
+  }
+}
+
+async function enablePush() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    alert(
+      'この画面はWeb Pushに対応していません。\n' +
+        'iPhoneの場合は「ホーム画面の鳥とんボードアプリ」から開き直してください\n' +
+        '(SafariやLINE内ブラウザからは設定できません)'
+    );
+    return;
+  }
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') {
+    alert('通知が許可されませんでした');
+    updatePushStatus();
+    return;
+  }
+  const reg = await navigator.serviceWorker.register('sw.js');
+  await navigator.serviceWorker.ready;
+  let sub = await reg.pushManager.getSubscription();
+  if (!sub) {
+    sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(CONFIG.VAPID_PUBLIC_KEY),
+    });
+  }
+  const j = sub.toJSON();
+  const { ok, data } = await callAction('push_subscribe', {
+    endpoint: j.endpoint,
+    keys: j.keys,
+  });
+  if (!ok) {
+    alert('登録に失敗しました: ' + (data.error || 'エラー'));
+    return;
+  }
+  updatePushStatus();
+}
+
 /* ── 起動 ── */
 function startBoard() {
   db = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
   loadAll().catch(() => {});
+
+  // 通知の裏方(サービスワーカー)を登録しておく
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+  updatePushStatus();
 
   // リアルタイム購読(変更があれば即リロード)
   db.channel('toriton-board')

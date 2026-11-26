@@ -71,6 +71,61 @@ async function linePush(token: string, to: string, text: string) {
   }
 }
 
+// ── Web Push(無料の着信通知) ──
+// VAPID鍵。公開鍵はコードに埋め込み、秘密鍵だけSupabaseシークレット(VAPID_PRIVATE_KEY)。
+const VAPID_PUBLIC =
+  "BETH9QOzSpwX_CvfgpUI04rraZFaa5tEVgjezUOoUEwR7Q7SIeCHEyifjBevruc3JEAUT7TErnbog5_jnRHFrWE";
+const VAPID_SUBJECT = "mailto:toriton@sushihut35-code.github.io";
+
+/* eslint-ignore deno-lint */
+let webpushLib: any = null;
+let webpushTried = false;
+async function getWebPush(): Promise<any> {
+  if (webpushTried) return webpushLib;
+  webpushTried = true;
+  try {
+    const priv = Deno.env.get("VAPID_PRIVATE_KEY") ?? "";
+    if (!priv) return null; // シークレット未設定 → LINEフォールバックのみ
+    const mod: any = await import("npm:web-push@3.6.7");
+    const wp = mod.default ?? mod;
+    wp.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, priv);
+    webpushLib = wp;
+  } catch (_e) {
+    webpushLib = null; // ライブラリが動かない環境でもLINEで凌ぐ
+  }
+  return webpushLib;
+}
+
+// 登録済みの全端末へWeb Push。送れた通数を返す(0=届く端末なし)
+async function webPushAll(
+  db: any,
+  title: string,
+  body: string,
+  tag: string
+): Promise<number> {
+  const wp = await getWebPush();
+  if (!wp) return 0;
+  const { data: subs } = await db.from("push_subs").select("endpoint,p256dh,auth");
+  let sent = 0;
+  for (const s of subs ?? []) {
+    try {
+      await wp.sendNotification(
+        { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+        JSON.stringify({ title, body, tag, url: BOARD_URL }),
+        { TTL: 300 }
+      );
+      sent++;
+    } catch (e: any) {
+      const code = e && e.statusCode;
+      if (code === 404 || code === 410) {
+        // 通知登録が古い端末は自動掃除
+        await db.from("push_subs").delete().eq("endpoint", s.endpoint);
+      }
+    }
+  }
+  return sent;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
@@ -138,18 +193,23 @@ Deno.serve(async (req) => {
         .map((i) => `・${i.name} ×${i.qty}`)
         .join("\n");
       const note = o.note ? `📝${o.note}\n` : "";
-      const sent = await linePush(
-        token,
-        Deno.env.get("OWNER_LINE_USER_ID") ?? "",
-        "🍳新規注文 #" + o.id + "\n" +
-          `⏰希望 ${pickupLabelJST(o.pickup_at)} ・ ${o.customer_name}様 ・ ¥${Number(
-            o.total
-          ).toLocaleString()}\n` +
-          lines + "\n" +
-          note +
-          "↓タップして受注ボードで確定\n" +
-          BOARD_URL
-      );
+      const title = "🍳新規注文 #" + o.id;
+      const body =
+        `⏰希望 ${pickupLabelJST(o.pickup_at)} ・ ${o.customer_name}様 ・ ¥${Number(
+          o.total
+        ).toLocaleString()}\n` +
+        lines + "\n" +
+        note +
+        "↓タップして受注ボードで確定";
+      // まずWeb Push(無料)→届く端末がなければLINEへ(予備)
+      const pushed = await webPushAll(db, title, body, "toriton-new");
+      const sent =
+        pushed > 0 ||
+        (await linePush(
+          token,
+          Deno.env.get("OWNER_LINE_USER_ID") ?? "",
+          title + "\n" + body
+        ));
       if (sent) {
         await db
           .from("takeout_orders")
@@ -177,14 +237,14 @@ Deno.serve(async (req) => {
           ? new Date(o.owner_notified_at).getTime()
           : 0;
         if (Date.now() - last < 60 * 1000) continue;
-        const ok = await linePush(
-          token,
-          ownerId,
-          `⚠️まだ未確認の注文があります #${o.id}\n` +
-            `希望 ${pickupLabelJST(o.pickup_at)} ・ ${o.customer_name}様\n` +
-            `↓タップして受注ボードで確定\n` +
-            BOARD_URL
-        );
+        const title = `⚠️まだ未確認の注文があります #${o.id}`;
+        const body =
+          `希望 ${pickupLabelJST(o.pickup_at)} ・ ${o.customer_name}様\n` +
+          "↓タップして受注ボードで確定";
+        // Web Pushが無料で鳴り続ける。端末未登録時のみLINEへ(予備)
+        const ok =
+          (await webPushAll(db, title, body, "toriton-nag")) > 0 ||
+          (await linePush(token, ownerId, title + "\n" + body));
         if (ok) {
           sent++;
           await db
@@ -371,6 +431,31 @@ Deno.serve(async (req) => {
         .from("special_hours")
         .delete()
         .eq("date", date);
+      if (error) return json({ error: error.message }, 500);
+      return json({ ok: true });
+    }
+
+    // ── Web Push端末の登録(ボードから) ──
+    case "push_subscribe": {
+      const endpoint = String(payload.endpoint ?? "");
+      const p256dh = String(payload.keys?.p256dh ?? "");
+      const auth = String(payload.keys?.auth ?? "");
+      if (!endpoint || !p256dh || !auth) {
+        return json({ error: "bad payload" }, 400);
+      }
+      const { error } = await db
+        .from("push_subs")
+        .upsert({ endpoint, p256dh, auth }, { onConflict: "endpoint" });
+      if (error) return json({ error: error.message }, 500);
+      return json({ ok: true });
+    }
+
+    case "push_unsubscribe": {
+      const endpoint = String(payload.endpoint ?? "");
+      const { error } = await db
+        .from("push_subs")
+        .delete()
+        .eq("endpoint", endpoint);
       if (error) return json({ error: error.message }, 500);
       return json({ ok: true });
     }

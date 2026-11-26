@@ -25,6 +25,11 @@ const CONFIG = {
   // 例: ['2026-12-31', '2027-01-01']
   HOLIDAYS: [],
 
+  // ── Web Push通知(ポケットでも無料で鳴る着信) ──
+  // 公開鍵(これ自体は公開してよいもの・秘密鍵はSupabaseのシークレット)
+  VAPID_PUBLIC_KEY:
+    'BETH9QOzSpwX_CvfgpUI04rraZFaa5tEVgjezUOoUEwR7Q7SIeCHEyifjBevruc3JEAUT7TErnbog5_jnRHFrWE',
+
   // ── Supabase(接続済み・anonキーは公開用なのでこのままでOK) ──
   SUPABASE_URL: 'https://hsjylabnkkmwnsaehbxe.supabase.co',
   SUPABASE_ANON_KEY: 'sb_publishable_mqo8cSYvGcwPVqhgoHRK8w_p-I0bUan',
