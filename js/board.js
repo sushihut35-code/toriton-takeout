@@ -664,7 +664,7 @@ function renderOrders() {
     if (o.status === 'new') groups.new.push(o);
     else if (o.status === 'accepted') groups.accepted.push(o);
   });
-  groups.accepted.sort((a, b) => new Date(a.pickup_at) - new Date(b.pickup_at));
+  groups.accepted.sort((a, b) => b.id - a.id); // 新しい注文が上に来る
 
   $('orders-new').innerHTML = groups.new.map(cardHtml).join('');
   $('orders-new-empty').hidden = groups.new.length > 0;
@@ -677,7 +677,7 @@ function renderOrders() {
   $('orders-accepted').innerHTML = groups.accepted.map(cardHtml).join('');
   $('orders-accepted-empty').hidden = groups.accepted.length > 0;
   $('accepted-summary').textContent = groups.accepted.length
-    ? `─ ${groups.accepted.length}件(受取時刻順)`
+    ? `─ ${groups.accepted.length}件(新しい順)`
     : '';
 }
 
