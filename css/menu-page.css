@@ -84,6 +84,31 @@ body {
   height: 100%;
   object-fit: cover;
   border-radius: 10px;
+  cursor: zoom-in;
+}
+
+/* 写真拡大(ライトボックス) */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  cursor: pointer;
+}
+.lightbox img {
+  max-width: 94vw;
+  max-height: 82vh;
+  object-fit: contain;
+  border-radius: 8px;
+}
+.lightbox__hint {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
 }
 .m-body {
   flex: 1;

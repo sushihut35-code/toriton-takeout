@@ -69,3 +69,16 @@ async function loadMenu() {
     .join('');
 }
 loadMenu();
+
+// 写真タップで拡大(もう一度タップで閉じる)
+document.addEventListener('click', (ev) => {
+  const thumb = ev.target.closest('.m-photo-slot img');
+  if (thumb) {
+    document.getElementById('lightbox-img').src = thumb.getAttribute('src');
+    document.getElementById('lightbox').hidden = false;
+    return;
+  }
+  if (ev.target.closest('#lightbox')) {
+    document.getElementById('lightbox').hidden = true;
+  }
+});
