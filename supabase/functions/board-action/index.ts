@@ -299,16 +299,29 @@ Deno.serve(async (req) => {
       if (!category || !name || !Number.isInteger(price) || price < 0) {
         return json({ error: "bad payload" }, 400);
       }
+      // オプション(例: 柚子胡椒=50)。配列で受け取り、壊れた物は捨てる
+      let options: unknown = null;
+      if (Array.isArray(payload.options)) {
+        const opts = (payload.options as { name?: unknown; price?: unknown }[])
+          .map((o) => ({
+            name: String(o.name ?? "").trim(),
+            price: Number(o.price),
+          }))
+          .filter(
+            (o) => o.name !== "" && Number.isInteger(o.price) && o.price >= 0
+          );
+        options = opts.length > 0 ? opts : null;
+      }
       if (payload.id) {
         const { error } = await db
           .from("menu_items")
-          .update({ category, name, price })
+          .update({ category, name, price, options })
           .eq("id", Number(payload.id));
         if (error) return json({ error: error.message }, 500);
       } else {
         const { error } = await db
           .from("menu_items")
-          .insert({ category, name, price, sort_no: sortNo });
+          .insert({ category, name, price, sort_no: sortNo, options });
         if (error) return json({ error: error.message }, 500);
       }
       return json({ ok: true });

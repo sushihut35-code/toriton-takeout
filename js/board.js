@@ -420,7 +420,9 @@ function renderMenuPanel() {
         .map(
           (r) => `
       <div class="menu-row ${r.available ? '' : 'menu-row--off'}">
-        <span class="menu-row__name">${esc(r.name)}</span>
+        <span class="menu-row__name">${esc(r.name)}${(r.options || [])
+          .map((o) => `<div class="menu-row__opt">└ ${esc(o.name)} +¥${Number(o.price).toLocaleString()}</div>`)
+          .join('')}</span>
         <span class="menu-row__price">¥${Number(r.price).toLocaleString()}</span>
         <button class="menu-chip ${r.available ? 'menu-chip--on' : 'menu-chip--off'}" data-mtoggle="${r.id}">${r.available ? '販売中' : '売り切れ'}</button>
         <button class="menu-chip" data-medit="${r.id}" title="編集">✏️</button>
@@ -471,6 +473,9 @@ function menuEdit(id) {
   $('menu-cat').value = item.category;
   $('menu-name').value = item.name;
   $('menu-price').value = item.price;
+  $('menu-options').value = (item.options || [])
+    .map((o) => `${o.name}=${o.price}`)
+    .join('、');
   $('menu-save-btn').textContent = '更新';
   $('menu-cancel-btn').hidden = false;
   $('menu-details').open = true;
@@ -481,6 +486,7 @@ function menuEditReset() {
   $('menu-cat').value = '';
   $('menu-name').value = '';
   $('menu-price').value = '';
+  $('menu-options').value = '';
   $('menu-save-btn').textContent = '追加';
   $('menu-cancel-btn').hidden = true;
 }
@@ -493,12 +499,30 @@ async function menuSave() {
     alert('カテゴリ・品名・価格(半角数字)を入力してください');
     return;
   }
+
+  // オプションの解析(例: 柚子胡椒=50、辛さ増し=30)
+  const rawOpts = $('menu-options').value.trim();
+  let options = null;
+  if (rawOpts) {
+    options = [];
+    rawOpts.split(/[、,]/).forEach((part) => {
+      const m = part.split(/[=＝]/);
+      if (m.length === 2 && m[0].trim() && Number(m[1]) >= 0) {
+        options.push({ name: m[0].trim(), price: Number(m[1]) });
+      }
+    });
+    if (options.length === 0) {
+      alert('オプションの書き方: 名前=追加料金(例:柚子胡椒=50)');
+      return;
+    }
+  }
+
   const sortNo = menuItems.length
     ? Math.max(...menuItems.map((m) => Number(m.sort_no) || 0)) + 1
     : 1;
   const payload = menuEditingId
-    ? { id: menuEditingId, category, name, price }
-    : { category, name, price, sort_no: sortNo };
+    ? { id: menuEditingId, category, name, price, options }
+    : { category, name, price, sort_no: sortNo, options };
   const { ok, data } = await callAction('menu_save', payload);
   if (!ok) {
     alert('保存に失敗しました: ' + (data.error || 'エラー'));

@@ -163,3 +163,14 @@ alter table public.special_hours enable row level security;
 -- フォーム側は読み取りだけ(設定はエッジファンクション経由)
 create policy "anon select special_hours" on public.special_hours
   for select to anon using (true);
+
+-- ============================================
+-- v1.7 メニューのオプション(柚子胡椒など)
+-- ============================================
+
+alter table public.menu_items add column if not exists options jsonb;
+
+-- 炭火焼き2品に「柚子胡椒 +50円」を付ける
+update public.menu_items
+   set options = '[{"name":"柚子胡椒","price":50}]'::jsonb
+ where name in ('豚もも炭火焼き', '鶏モモ炭火焼き');

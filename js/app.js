@@ -39,7 +39,12 @@ function normalizedMenu() {
       map.set(r.category, []);
       cats.push(r.category);
     }
-    map.get(r.category).push({ id: 'db-' + r.id, name: r.name, price: r.price });
+    map.get(r.category).push({
+      id: 'db-' + r.id,
+      name: r.name,
+      price: r.price,
+      options: Array.isArray(r.options) ? r.options : [],
+    });
   });
   return {
     categories: cats.map((c) => ({
@@ -82,6 +87,13 @@ function buildItemIndex() {
         });
       } else {
         ITEM_INDEX.set(it.id, { name: it.name, price: it.price });
+        // オプション品(例: 豚もも炭火焼き+柚子胡椒)は別の品目として扱う
+        (it.options || []).forEach((o) => {
+          ITEM_INDEX.set(`${it.id}|${o.name}`, {
+            name: `${it.name}(${o.name})`,
+            price: it.price + Number(o.price),
+          });
+        });
       }
     });
   });
@@ -349,7 +361,18 @@ function renderMenu() {
           <div class="item__price">¥${item.price.toLocaleString()}</div>
         </div>
         ${qtyControl(item.id)}
+      </div>
+      ${(item.options || [])
+        .map(
+          (opt) => `
+      <div class="item item--option">
+        <div class="item__main">
+          <div class="item__name">└ ${opt.name}付き <span class="option-price">+¥${Number(opt.price).toLocaleString()}</span></div>
+        </div>
+        ${qtyControl(item.id + '|' + opt.name)}
       </div>`
+        )
+        .join('')}`
         )
         .join('')}
     </section>`

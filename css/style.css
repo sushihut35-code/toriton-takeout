@@ -134,6 +134,29 @@ body {
   transform: scale(0.9);
 }
 
+/* オプション付き品目(柚子胡椒など)の行 */
+.item--option {
+  margin-top: -7px;
+  padding-top: 8px;
+  border-top: none;
+  background: #fdfbf7;
+}
+.item--option .item__name {
+  font-size: 13px;
+  color: var(--sub);
+  font-weight: 600;
+}
+.option-price {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 12px;
+}
+.item--option .stepper__btn {
+  width: 34px;
+  height: 34px;
+  font-size: 17px;
+}
+
 /* カード上の個数カウンター(＋を押すと [− 2 ＋] に変わる) */
 .stepper {
   display: flex;

@@ -8,8 +8,14 @@ const MENU = {
       name: '炭火焼き',
       emoji: '🔥',
       items: [
-        { id: 'pork-momo',    name: '豚もも炭火焼き', price: 1500 },
-        { id: 'chicken-momo', name: '鶏モモ炭火焼き', price: 1400 },
+        {
+          id: 'pork-momo', name: '豚もも炭火焼き', price: 1500,
+          options: [{ name: '柚子胡椒', price: 50 }],
+        },
+        {
+          id: 'chicken-momo', name: '鶏モモ炭火焼き', price: 1400,
+          options: [{ name: '柚子胡椒', price: 50 }],
+        },
         { id: 'tataki',       name: '鶏のたたき',     price: 1500 },
       ],
     },
