@@ -314,11 +314,13 @@ function renderSlots() {
    メニュー描画(24時間いつでも注文可)
    ============================================ */
 
-// 品目カードの写真スロット(photos/{品目ID}.jpg があれば自動表示・無ければ何も出ない)
+// 品目カードの写真スロット
+// ①Supabaseストレージ(ボード📷で差し替えた最新)→ ②photos/{ID}.jpg(予備)→ ③非表示
 function photoTag(id) {
   if (!id || !id.startsWith('db-')) return '';
   const num = id.slice(3);
-  return `<img class="item__photo" src="photos/${num}.jpg" alt="" onerror="this.remove()">`;
+  const sb = `${CONFIG.SUPABASE_URL}/storage/v1/object/public/menu-photos/${num}.jpg`;
+  return `<img class="item__photo" src="${sb}" alt="" onerror="if(this.dataset.fb!=='1'){this.dataset.fb='1';this.src='photos/${num}.jpg';}else{this.remove()}">`;
 }
 
 // 品目カードの右側:入ってなければ＋ボタン、入ってれば [− 数 ＋] カウンター

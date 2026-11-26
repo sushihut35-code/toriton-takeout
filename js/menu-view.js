@@ -53,9 +53,10 @@ async function loadMenu() {
             )
             .join('');
           const soldOut = r.available ? '' : '<span class="m-soldout">売り切れ</span>';
+          const sb = `${CONFIG.SUPABASE_URL}/storage/v1/object/public/menu-photos/${r.id}.jpg`;
           return `
       <div class="m-card ${r.available ? '' : 'm-card--off'}">
-        <div class="m-photo-slot"><img src="photos/${r.id}.jpg" alt="${esc(r.name)}" onerror="this.parentElement.remove()"></div>
+        <div class="m-photo-slot"><img src="${sb}" alt="${esc(r.name)}" onerror="if(this.dataset.fb!=='1'){this.dataset.fb='1';this.src='photos/${r.id}.jpg';}else{this.parentElement.remove()}"></div>
         <div class="m-body">
           <div class="m-name">${esc(r.name)}${soldOut}</div>
           <div class="m-price">¥${Number(r.price).toLocaleString()}</div>

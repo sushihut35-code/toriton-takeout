@@ -425,6 +425,7 @@ function renderMenuPanel() {
           .join('')}</span>
         <span class="menu-row__price">¥${Number(r.price).toLocaleString()}</span>
         <button class="menu-chip ${r.available ? 'menu-chip--on' : 'menu-chip--off'}" data-mtoggle="${r.id}">${r.available ? '販売中' : '売り切れ'}</button>
+        <button class="menu-chip" data-mphoto="${r.id}" title="写真を変更">📷</button>
         <button class="menu-chip" data-medit="${r.id}" title="編集">✏️</button>
         <button class="menu-chip" data-mdel="${r.id}" title="削除">🗑</button>
       </div>`
@@ -529,6 +530,49 @@ async function menuSave() {
     return;
   }
   menuEditReset();
+  refresh();
+}
+
+/* ── メニュー写真の差し替え(📷ボタン→カメラロール→自動圧縮してアップ) ── */
+let photoTargetId = null;
+
+async function compressImage(file) {
+  const img = await createImageBitmap(file);
+  const max = 800;
+  let w = img.width;
+  let h = img.height;
+  if (w > h && w > max) { h = Math.round((h * max) / w); w = max; }
+  else if (h > max) { w = Math.round((w * max) / h); h = max; }
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+  return await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.82));
+}
+
+async function uploadMenuPhoto(id, file) {
+  let blob = file;
+  try {
+    blob = await compressImage(file); // 大きい写真は800pxに縮小
+  } catch (e) { /* 圧縮できなければそのまま */ }
+  if (blob && blob.size > 4 * 1024 * 1024) {
+    alert('写真が大きすぎます(4MBまでの画像をお願いします)');
+    return;
+  }
+  const fd = new FormData();
+  fd.append('password', boardPassword);
+  fd.append('id', String(id));
+  fd.append('file', blob, 'photo.jpg');
+  const r = await fetch(`${CONFIG.SUPABASE_URL}/functions/v1/board-action`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${CONFIG.SUPABASE_ANON_KEY}` },
+    body: fd,
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    alert('写真のアップロードに失敗しました: ' + (data.error || 'エラー'));
+    return;
+  }
   refresh();
 }
 
@@ -672,7 +716,7 @@ async function toggleSlot(iso) {
 /* ── イベント ── */
 document.addEventListener('click', (ev) => {
   const t = ev.target.closest(
-    '[data-confirm],[data-slot],[data-cal],[data-calnav],[data-mtoggle],[data-medit],[data-mdel],[data-shdel]'
+    '[data-confirm],[data-slot],[data-cal],[data-calnav],[data-mtoggle],[data-medit],[data-mdel],[data-mphoto],[data-shdel]'
   );
   if (!t) return;
   if (t.dataset.confirm) confirmOrder(Number(t.dataset.confirm));
@@ -687,7 +731,17 @@ document.addEventListener('click', (ev) => {
   if (t.dataset.mtoggle) menuToggle(Number(t.dataset.mtoggle));
   if (t.dataset.medit) menuEdit(Number(t.dataset.medit));
   if (t.dataset.mdel) menuDelete(Number(t.dataset.mdel));
+  if (t.dataset.mphoto) {
+    photoTargetId = Number(t.dataset.mphoto);
+    $('menu-photo-input').value = '';
+    $('menu-photo-input').click();
+  }
   if (t.dataset.shdel) deleteSpecialHours(t.dataset.shdel);
+});
+$('menu-photo-input').addEventListener('change', (ev) => {
+  const f = ev.target.files && ev.target.files[0];
+  if (f && photoTargetId) uploadMenuPhoto(photoTargetId, f);
+  ev.target.value = '';
 });
 $('sh-save-btn').addEventListener('click', saveSpecialHours);
 $('menu-save-btn').addEventListener('click', menuSave);

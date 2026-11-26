@@ -165,6 +165,15 @@ create policy "anon select special_hours" on public.special_hours
   for select to anon using (true);
 
 -- ============================================
+-- v1.9 メニュー写真のストレージ(ボードから差し替え)
+-- ============================================
+
+insert into storage.buckets (id, name, public)
+values ('menu-photos', 'menu-photos', true)
+on conflict (id) do nothing;
+-- バケットは公開読み取り。書き込み(アップロード)はエッジファンクション経由のみ
+
+-- ============================================
 -- v1.7 メニューのオプション(柚子胡椒など)
 -- ============================================
 

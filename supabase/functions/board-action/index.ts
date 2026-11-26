@@ -153,6 +153,40 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
+  const db = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
+
+  // ── メニュー写真のアップロード(multipart/form-data で受ける) ──
+  const contentType = req.headers.get("content-type") ?? "";
+  if (contentType.includes("multipart/form-data")) {
+    const boardPw = Deno.env.get("BOARD_PASSWORD") ?? "";
+    const form = await req.formData().catch(() => null);
+    if (!form) return json({ error: "bad form" }, 400);
+    if (!boardPw || String(form.get("password") ?? "") !== boardPw) {
+      return json({ error: "unauthorized" }, 401);
+    }
+    const id = Number(form.get("id"));
+    const file = form.get("file");
+    if (!Number.isInteger(id) || id <= 0 || !(file instanceof File)) {
+      return json({ error: "bad payload" }, 400);
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      return json({ error: "写真が大きすぎます(4MBまで)" }, 400);
+    }
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const { error: upErr } = await db.storage
+      .from("menu-photos")
+      .upload(`${id}.jpg`, bytes, {
+        contentType: "image/jpeg",
+        upsert: true,
+      });
+    if (upErr) return json({ error: upErr.message }, 500);
+    console.log(`[photo] 品目${id}の写真を更新(${Math.round(file.size / 1024)}KB)`);
+    return json({ ok: true });
+  }
+
   const body = await req.json().catch(() => ({}));
   const password = String(body.password ?? "");
   const action = String(body.action ?? "");
@@ -168,11 +202,6 @@ Deno.serve(async (req) => {
   if (!isPublicAction && (!boardPassword || password !== boardPassword)) {
     return json({ error: "unauthorized" }, 401);
   }
-
-  const db = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-  );
 
   switch (action) {
     // パスワード確認用
