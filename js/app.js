@@ -542,7 +542,6 @@ async function submitOrder() {
             type: 'text',
             text:
               'ご注文ありがとうございます!\n' +
-              `受付番号 #${data.id}\n` +
               `希望受取時間 ${pickupLabel} / 合計 ¥${total.toLocaleString()}\n` +
               '※混雑時は受取時間を調整のうえ、こちらのトークでご連絡いたします。\n' +
               '受取時にお名前をお伝えください。',
@@ -554,7 +553,6 @@ async function submitOrder() {
     }
 
     // 完了画面
-    $('done-no').textContent = `#${data.id}`;
     $('done-time').textContent = pickupLabel;
     $('done-amount').textContent = `¥${total.toLocaleString()}`;
     cart.clear();
