@@ -15,7 +15,10 @@
 <body>
 <header class="b-header">
   <div class="b-title">🍗 鳥とん 受注ボード</div>
-  <div class="b-status" id="conn-status">…</div>
+  <div class="b-header__right">
+    <div class="b-status" id="conn-status">…</div>
+    <button id="settings-btn" class="settings-btn">⚙ 設定</button>
+  </div>
 </header>
 
 <!-- 本日休業バナー -->
@@ -38,6 +41,14 @@
     </div>
   </details>
 </section>
+
+<!-- お店の設定収納庫(⚙ボタンで開く) -->
+<div id="settings-overlay" class="settings-overlay" hidden>
+  <div class="settings-bar">
+    <div class="settings-title">⚙ お店の設定</div>
+    <button id="settings-close" class="settings-close">閉じる ✕</button>
+  </div>
+  <div class="settings-body">
 
 <section class="b-section">
   <details class="b-details" id="holiday-details">
@@ -87,6 +98,9 @@
     </div>
   </details>
 </section>
+
+  </div><!-- /settings-body -->
+</div><!-- /settings-overlay -->
 
 <section class="b-section">
   <div class="new-banner" id="new-banner" hidden>

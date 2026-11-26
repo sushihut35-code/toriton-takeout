@@ -40,9 +40,66 @@ body {
   top: 0;
   z-index: 10;
 }
+.b-header__right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
 .b-title {
   font-size: 20px;
   font-weight: 800;
+}
+.settings-btn {
+  background: var(--card);
+  border: 1.5px solid var(--line);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 9px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.settings-btn:active {
+  transform: scale(0.95);
+}
+
+/* ── 設定収納庫(全画面オーバーレイ) ── */
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: var(--bg);
+  overflow-y: auto;
+}
+.settings-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: var(--panel);
+  border-bottom: 3px solid var(--accent);
+}
+.settings-title {
+  font-size: 18px;
+  font-weight: 800;
+}
+.settings-close {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.settings-body {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 4px 0 80px;
 }
 .b-status {
   font-size: 12px;

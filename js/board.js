@@ -669,6 +669,13 @@ $('sh-save-btn').addEventListener('click', saveSpecialHours);
 $('menu-save-btn').addEventListener('click', menuSave);
 $('menu-cancel-btn').addEventListener('click', menuEditReset);
 
+$('settings-btn').addEventListener('click', () => {
+  $('settings-overlay').hidden = false;
+});
+$('settings-close').addEventListener('click', () => {
+  $('settings-overlay').hidden = true;
+});
+
 $('today-holiday-btn').addEventListener('click', () => {
   toggleDateHoliday(isoOfMid(startOfToday()));
 });
