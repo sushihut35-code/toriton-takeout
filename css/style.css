@@ -134,6 +134,15 @@ body {
   transform: scale(0.9);
 }
 
+/* 品目カードの写真(photos/に置いた時だけ出る) */
+.item__photo {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
 /* オプション付き品目(柚子胡椒など)の行 */
 .item--option {
   margin-top: -7px;

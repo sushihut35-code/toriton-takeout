@@ -314,6 +314,13 @@ function renderSlots() {
    メニュー描画(24時間いつでも注文可)
    ============================================ */
 
+// 品目カードの写真スロット(photos/{品目ID}.jpg があれば自動表示・無ければ何も出ない)
+function photoTag(id) {
+  if (!id || !id.startsWith('db-')) return '';
+  const num = id.slice(3);
+  return `<img class="item__photo" src="photos/${num}.jpg" alt="" onerror="this.remove()">`;
+}
+
 // 品目カードの右側:入ってなければ＋ボタン、入ってれば [− 数 ＋] カウンター
 function qtyControl(id) {
   const cur = cart.get(id);
@@ -356,6 +363,7 @@ function renderMenu() {
       </div>`
             : `
       <div class="item">
+        ${photoTag(item.id)}
         <div class="item__main">
           <div class="item__name">${item.name}</div>
           <div class="item__price">¥${item.price.toLocaleString()}</div>
