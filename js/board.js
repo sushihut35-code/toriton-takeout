@@ -171,14 +171,15 @@ async function callAction(action, payload) {
 /* ── データ取得 ── */
 async function loadAll() {
   const today = startOfToday().toISOString();
+  // 注文(個人情報)は合言葉認証の裏口から。他は公開情報なので直接読む
   const [oRes, sRes, hRes, mRes, spRes] = await Promise.all([
-    db.from('takeout_orders').select('*').gte('pickup_at', today).order('pickup_at'),
+    callAction('orders_today', { today }),
     db.from('pickup_slot_stops').select('slot_at').gte('slot_at', today),
     db.from('shop_holidays').select('kind,day_of_week,holiday_date'),
     db.from('menu_items').select('*').order('sort_no'),
     db.from('special_hours').select('*'),
   ]);
-  orders = oRes.data || [];
+  orders = (oRes.ok && oRes.data && oRes.data.orders) || [];
   stops = new Set((sRes.data || []).map((r) => minuteKey(r.slot_at)));
   menuItems = mRes.data || [];
   specialHours = new Map();
@@ -870,13 +871,8 @@ function startBoard() {
   }
   updatePushStatus();
 
-  // リアルタイム購読(変更があれば即リロード)
+  // リアルタイム購読(店舗設定系。注文は裏口経由なので20秒ポーリングで拾う)
   db.channel('toriton-board')
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'takeout_orders' },
-      refresh
-    )
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'pickup_slot_stops' },

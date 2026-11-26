@@ -554,6 +554,17 @@ async function submitOrder() {
       /* スコープ未付与でも注文自体は完了している */
     }
 
+    // 次回のためにこの端末へお名前・電話を覚えさせておく
+    try {
+      localStorage.setItem(
+        'toriton_customer',
+        JSON.stringify({
+          name: $('name-input').value.trim(),
+          phone: $('phone-input').value.trim(),
+        })
+      );
+    } catch (e) { /* 保存できなくても注文には影響なし */ }
+
     // 完了画面
     $('done-time').textContent = pickupLabel;
     $('done-amount').textContent = `¥${total.toLocaleString()}`;
@@ -592,29 +603,44 @@ $('cart-backdrop').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) closeCart();
 });
 
-// ── リピーター対策:前回の注文からお名前・電話番号を自動入力 ──
-// (LINE IDで自分の直近の注文を引いてくる。LINEアカウントが同じなら端末が変わっても効く)
+// ── リピーター対策:お名前・電話番号の自動入力 ──
+// ①この端末で前回使った情報(端末内メモ)
+// ②LINE本人確認つきの裏口から自分の前回注文(端末が変わっても効く)
 async function prefillCustomerInfo() {
-  if (!profile.userId) return;
-  if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY || !window.supabase) return;
   try {
-    const db = window.supabase.createClient(
-      CONFIG.SUPABASE_URL,
-      CONFIG.SUPABASE_ANON_KEY
-    );
-    const { data } = await db
-      .from('takeout_orders')
-      .select('customer_name,phone')
-      .eq('line_user_id', profile.userId)
-      .order('id', { ascending: false })
-      .limit(1);
-    const last = data && data[0];
-    if (last) {
-      if (last.customer_name) $('name-input').value = last.customer_name;
-      if (last.phone) $('phone-input').value = last.phone;
+    const saved = JSON.parse(localStorage.getItem('toriton_customer') || 'null');
+    if (saved) {
+      if (saved.name) $('name-input').value = saved.name;
+      if (saved.phone) $('phone-input').value = saved.phone;
     }
+  } catch (e) { /* メモが壊れていれば無視 */ }
+
+  if (!profile.userId || !CONFIG.SUPABASE_URL || !window.supabase) return;
+  try {
+    let accessToken = null;
+    try {
+      if (typeof liff !== 'undefined' && liff.isLoggedIn()) {
+        accessToken = liff.getAccessToken();
+      }
+    } catch (e) { /* トークンが取れなければ端末内メモのみ */ }
+    if (!accessToken) return;
+
+    const r = await fetch(`${CONFIG.SUPABASE_URL}/functions/v1/board-action`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${CONFIG.SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'my_last_order',
+        payload: { access_token: accessToken },
+      }),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (data && data.name) $('name-input').value = data.name;
+    if (data && data.phone) $('phone-input').value = data.phone;
   } catch (e) {
-    // 取れなければ空欄のまま(LINEの表示名が入る)
+    // 取れなければ今入っている値のまま
   }
 }
 

@@ -197,7 +197,9 @@ Deno.serve(async (req) => {
   // notify_owner / nag_unconfirmed は注文フォームやcronから呼ぶためパスワード不要。
   // いたずら対策は action 側で行う(新規注文のみ・再通知は間隔を空ける)
   const isPublicAction =
-    action === "notify_owner" || action === "nag_unconfirmed";
+    action === "notify_owner" ||
+    action === "nag_unconfirmed" ||
+    action === "my_last_order";
   const boardPassword = Deno.env.get("BOARD_PASSWORD") ?? "";
   if (!isPublicAction && (!boardPassword || password !== boardPassword)) {
     return json({ error: "unauthorized" }, 401);
@@ -207,6 +209,48 @@ Deno.serve(async (req) => {
     // パスワード確認用
     case "ping":
       return json({ ok: true });
+
+    // ── 今日の注文一覧(ボード用・合言葉認証) ──
+    case "orders_today": {
+      const today = String(payload.today ?? "");
+      if (!/^\d{4}-\d{2}-\d{2}T/.test(today)) {
+        return json({ error: "bad payload" }, 400);
+      }
+      const { data, error } = await db
+        .from("takeout_orders")
+        .select("*")
+        .gte("pickup_at", today)
+        .order("pickup_at");
+      if (error) return json({ error: error.message }, 500);
+      return json({ ok: true, orders: data ?? [] });
+    }
+
+    // ── 自分の前回注文(リピーター自動入力用・LINE本人確認) ──
+    case "my_last_order": {
+      const at = String(payload.access_token ?? "");
+      if (!at) return json({ error: "bad payload" }, 400);
+      let sub = "";
+      try {
+        const v = await fetch(
+          "https://api.line.me/oauth2/v2.1/verify?access_token=" +
+            encodeURIComponent(at)
+        );
+        if (!v.ok) return json({ error: "invalid token" }, 401);
+        const j = await v.json();
+        sub = String(j.sub ?? "");
+      } catch (_e) {
+        return json({ error: "verify failed" }, 500);
+      }
+      if (!sub) return json({ error: "invalid token" }, 401);
+      const { data } = await db
+        .from("takeout_orders")
+        .select("customer_name,phone")
+        .eq("line_user_id", sub)
+        .order("id", { ascending: false })
+        .limit(1);
+      const last = data && data[0];
+      return json(last ? { name: last.customer_name, phone: last.phone ?? "" } : {});
+    }
 
     // ── 新規注文を店主のLINEへ即通知(注文フォームから呼ばれる) ──
     case "notify_owner": {
