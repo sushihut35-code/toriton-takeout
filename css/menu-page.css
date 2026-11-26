@@ -15,6 +15,11 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* hidden属性は display 指定より優先(拡大画面の初期非表示に必須) */
+[hidden] {
+  display: none !important;
+}
+
 body {
   font-family: -apple-system, "Hiragino Sans", "Noto Sans JP",
     "Yu Gothic UI", sans-serif;
