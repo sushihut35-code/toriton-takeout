@@ -1,0 +1,158 @@
+/* 鳥とん 注文のしかた(フローチャート) */
+:root {
+  --bg: #faf7f2;
+  --card: #ffffff;
+  --ink: #2b2320;
+  --sub: #8a7f77;
+  --accent: #d9581e;
+  --line: #eee6dd;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: -apple-system, "Hiragino Sans", "Noto Sans JP",
+    "Yu Gothic UI", sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  padding-bottom: 84px;
+}
+
+.g-header {
+  padding: 18px 16px 14px;
+  border-bottom: 3px solid var(--accent);
+  background: var(--card);
+}
+.g-logo {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+.g-sub {
+  font-size: 12px;
+  color: var(--sub);
+  margin-top: 2px;
+}
+
+.g-wrap {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 20px 14px 30px;
+}
+
+/* ── チャート本体 ── */
+.g-step {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.g-badge {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 8px;
+}
+.g-card {
+  flex: 1;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.g-title {
+  font-size: 15px;
+  font-weight: 800;
+}
+.g-text {
+  font-size: 13px;
+  color: var(--sub);
+  margin-top: 4px;
+  line-height: 1.6;
+}
+.g-em {
+  color: var(--accent);
+  font-weight: 700;
+}
+.g-arrow {
+  text-align: left;
+  padding-left: 11px;
+  color: var(--accent);
+  font-size: 13px;
+  line-height: 1;
+  margin: 6px 0;
+}
+
+/* ── リンク・FAQ ── */
+.g-links {
+  display: flex;
+  gap: 8px;
+  margin-top: 22px;
+}
+.g-link {
+  flex: 1;
+  background: var(--card);
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 6px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  text-decoration: none;
+}
+.g-faq {
+  margin-top: 18px;
+  background: var(--card);
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.g-faq__q {
+  font-size: 13px;
+  font-weight: 700;
+}
+.g-faq__a {
+  font-size: 13px;
+  color: var(--sub);
+  margin-top: 4px;
+  line-height: 1.6;
+}
+
+/* ── 注文ボタン ── */
+.g-order-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  background: rgba(43, 35, 32, 0.97);
+  display: flex;
+  justify-content: center;
+}
+.g-order-btn {
+  width: 100%;
+  max-width: 456px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 14px 22px;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+}
