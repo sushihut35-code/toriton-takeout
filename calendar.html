@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>鳥とん 営業カレンダー</title>
+<link rel="stylesheet" href="css/calendar.css">
+</head>
+<body>
+<header class="c-header">
+  <div class="c-logo">炭火焼 鳥とん</div>
+  <div class="c-sub">営業カレンダー</div>
+</header>
+
+<main class="cal-wrap">
+  <div class="cal-hint">通常営業 <b id="normal-hours">15:00〜19:00</b>(持ち帰り注文は24時間受け付け)</div>
+
+  <div class="cal-nav">
+    <button id="cal-prev" aria-label="前の月">‹</button>
+    <span id="cal-title">読み込み中…</span>
+    <button id="cal-next" aria-label="次の月">›</button>
+  </div>
+
+  <div class="cal-grid" id="cal-grid"></div>
+
+  <div class="cal-legend">
+    <span>🟥 休業日</span>
+    <span>🔵 特別営業時間</span>
+    <span>□ 今日</span>
+  </div>
+
+  <div id="month-notes" class="notes"></div>
+</main>
+
+<script src="js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/calendar.js"></script>
+</body>
+</html>

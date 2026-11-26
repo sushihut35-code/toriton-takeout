@@ -1,0 +1,157 @@
+/* 鳥とん 営業カレンダー(お客様向け・注文フォームと同じ明るい雰囲気) */
+:root {
+  --bg: #faf7f2;
+  --card: #ffffff;
+  --ink: #2b2320;
+  --sub: #8a7f77;
+  --accent: #d9581e;
+  --line: #eee6dd;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: -apple-system, "Hiragino Sans", "Noto Sans JP",
+    "Yu Gothic UI", sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+}
+
+.c-header {
+  padding: 18px 16px 14px;
+  border-bottom: 3px solid var(--accent);
+  background: var(--card);
+}
+.c-logo {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+.c-sub {
+  font-size: 12px;
+  color: var(--sub);
+  margin-top: 2px;
+}
+
+.cal-wrap {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 16px 14px 48px;
+}
+
+.cal-hint {
+  font-size: 13px;
+  color: var(--sub);
+  text-align: center;
+  margin-bottom: 14px;
+  line-height: 1.6;
+}
+.cal-hint b {
+  color: var(--accent);
+}
+
+.cal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.cal-nav span {
+  font-size: 16px;
+  font-weight: 800;
+}
+.cal-nav button {
+  width: 44px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1.5px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.cal-nav button:active {
+  background: #fdf1ea;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.c-wd {
+  text-align: center;
+  font-size: 11px;
+  color: var(--sub);
+  padding: 2px 0 6px;
+  font-weight: 700;
+}
+.c-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  background: var(--card);
+  border: 1.5px solid var(--line);
+}
+.c-day--closed {
+  background: #fdeeee;
+  border-color: #e0a3a3;
+  color: #b94a4a;
+}
+.c-day--special {
+  background: #eef4fd;
+  border-color: #a3c0e0;
+  color: #3d6ca8;
+}
+.c-day--today {
+  border-color: var(--accent);
+  border-width: 2px;
+}
+.c-day--past {
+  opacity: 0.4;
+}
+
+.cal-legend {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  margin-top: 12px;
+  font-size: 11px;
+  color: var(--sub);
+}
+
+.notes {
+  margin-top: 18px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.note-row {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 5px 0;
+  border-bottom: 1px dashed var(--line);
+}
+.note-row:last-child {
+  border-bottom: none;
+}
+.note-none {
+  color: var(--sub);
+  font-weight: 500;
+}
+.note-error {
+  font-size: 13px;
+  color: #b94a4a;
+}
