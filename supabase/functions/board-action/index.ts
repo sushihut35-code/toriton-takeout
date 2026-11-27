@@ -253,17 +253,36 @@ Deno.serve(async (req) => {
     }
 
     // ── 新規注文を店主のLINEへ即通知(注文フォームから呼ばれる) ──
+    // v1.10で匿名selectを閉じたためフォームからidが返らない。
+    // LINEユーザーIDでその客の最新の新規注文を探す(id指定も互換で残す)
     case "notify_owner": {
       const id = Number(payload.id);
-      if (!id) return json({ error: "bad payload" }, 400);
+      const uid = String(payload.line_user_id ?? "");
+      if (!id && !uid) return json({ error: "bad payload" }, 400);
 
-      const { data: o } = await db
-        .from("takeout_orders")
-        .select(
-          "id,status,customer_name,items,total,note,pickup_at,line_user_id,created_at,owner_notified_at"
-        )
-        .eq("id", id)
-        .single();
+      let o: any = null;
+      if (id) {
+        const r = await db
+          .from("takeout_orders")
+          .select(
+            "id,status,customer_name,items,total,note,pickup_at,line_user_id,created_at,owner_notified_at"
+          )
+          .eq("id", id)
+          .maybeSingle();
+        o = r.data;
+      } else {
+        const r = await db
+          .from("takeout_orders")
+          .select(
+            "id,status,customer_name,items,total,note,pickup_at,line_user_id,created_at,owner_notified_at"
+          )
+          .eq("status", "new")
+          .eq("line_user_id", uid)
+          .order("id", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        o = r.data;
+      }
       if (!o) return json({ ok: true, skipped: "not found" });
       if (o.status !== "new") return json({ ok: true, skipped: "not new" });
 

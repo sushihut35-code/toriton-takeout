@@ -19,18 +19,24 @@ create table if not exists public.takeout_orders (
 
 alter table public.takeout_orders enable row level security;
 
--- 客(LIFFアプリ)からの書き込みを許可
+-- 客(LIFFアプリ)からの書き込みを許可(何回実行してもよい形)
+drop policy if exists "anon insert" on public.takeout_orders;
 create policy "anon insert" on public.takeout_orders
   for insert to anon with check (true);
 
 -- 読み取りを許可(次工程の受注ボード用)
 -- ※URLを知る人なら誰でも注文一覧を見られる簡易運用(v1)
+drop policy if exists "anon select" on public.takeout_orders;
 create policy "anon select" on public.takeout_orders
   for select to anon using (true);
 
 -- 受注ボード(次工程)でのリアルタイム配信を有効化
 -- ※エラーが出る場合は実行しなくても注文フォーム自体には影響なし
-alter publication supabase_realtime add table public.takeout_orders;
+do $$
+begin
+  alter publication supabase_realtime add table public.takeout_orders;
+exception when duplicate_object then null;
+end $$;
 
 -- 動作確認用メモ:
 -- テーブルの中身は Supabase 管理画面の「Table Editor → takeout_orders」で見られる
@@ -53,6 +59,7 @@ create table if not exists public.pickup_slot_stops (
 alter table public.pickup_slot_stops enable row level security;
 
 -- フォーム側は「読み取りだけ」許可(停止の追加/解除はエッジファンクション経由)
+drop policy if exists "anon select stops" on public.pickup_slot_stops;
 create policy "anon select stops" on public.pickup_slot_stops
   for select to anon using (true);
 
@@ -109,6 +116,7 @@ create table if not exists public.shop_holidays (
 alter table public.shop_holidays enable row level security;
 
 -- フォーム側は読み取りだけ許可(追加/削除はエッジファンクション経由)
+drop policy if exists "anon select holidays" on public.shop_holidays;
 create policy "anon select holidays" on public.shop_holidays
   for select to anon using (true);
 
@@ -128,6 +136,7 @@ create table if not exists public.menu_items (
 alter table public.menu_items enable row level security;
 
 -- フォーム側は読み取りだけ(追加・変更はエッジファンクション経由)
+drop policy if exists "anon select menu" on public.menu_items;
 create policy "anon select menu" on public.menu_items
   for select to anon using (true);
 
@@ -161,6 +170,7 @@ create table if not exists public.special_hours (
 alter table public.special_hours enable row level security;
 
 -- フォーム側は読み取りだけ(設定はエッジファンクション経由)
+drop policy if exists "anon select special_hours" on public.special_hours;
 create policy "anon select special_hours" on public.special_hours
   for select to anon using (true);
 

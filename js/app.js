@@ -519,21 +519,22 @@ async function submitOrder() {
       total,
     };
 
-    const { data, error } = await db
-      .from('takeout_orders')
-      .insert(order)
-      .select('id')
-      .single();
+    // 注文を預ける(v1.10で匿名selectを閉じたため受領書は返らない。成否だけ見る)
+    const { error } = await db.from('takeout_orders').insert(order);
     if (error) throw error;
 
     // 店主のLINEへ「新規注文」通知を送る(成否は注文自体に影響させない)
+    // ※idが返らないため、LINEユーザーIDで最新注文を探してもらう
     fetch(`${CONFIG.SUPABASE_URL}/functions/v1/board-action`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${CONFIG.SUPABASE_ANON_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ action: 'notify_owner', payload: { id: data.id } }),
+      body: JSON.stringify({
+        action: 'notify_owner',
+        payload: { line_user_id: order.line_user_id },
+      }),
     }).catch(() => {});
 
     // トーク画面へ控えを送る(chat_message.write スコープがあれば届く)
