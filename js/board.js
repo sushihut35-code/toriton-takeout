@@ -198,6 +198,7 @@ async function loadAll() {
       holidayDates.add(String(r.holiday_date));
     }
   });
+  renderOpenNow();
   renderSlots();
   renderHolidays();
   renderMenuPanel();
@@ -714,6 +715,57 @@ async function toggleSlot(iso) {
   refresh();
 }
 
+/* ── 🚀 今から開店(押した時刻で今日の開店時刻を登録・フォームに即反映) ── */
+function renderOpenNow() {
+  const s = specialHours.get(isoOfMid(new Date()));
+  const status = $('open-now-status');
+  const resetBtn = $('open-reset-btn');
+  if (s) {
+    status.textContent = `今日: ${s.open}〜${s.close} で受付中`;
+    resetBtn.hidden = false;
+  } else {
+    status.textContent = `通常: ${CONFIG.OPEN_TIME}〜${CONFIG.CLOSE_TIME}`;
+    resetBtn.hidden = true;
+  }
+}
+
+async function openNow() {
+  const now = new Date();
+  const open =
+    String(now.getHours()).padStart(2, '0') + ':' +
+    String(now.getMinutes()).padStart(2, '0');
+  if (open >= CONFIG.CLOSE_TIME) {
+    alert(`通常の閉店時刻(${CONFIG.CLOSE_TIME})を過ぎています`);
+    return;
+  }
+  const btn = $('open-now-btn');
+  btn.disabled = true;
+  btn.textContent = '設定中…';
+  const { ok, data } = await callAction('special_hours_save', {
+    date: isoOfMid(now),
+    open_time: open,
+    close_time: CONFIG.CLOSE_TIME,
+  });
+  btn.disabled = false;
+  btn.textContent = '今から開店';
+  if (!ok) {
+    alert('開店設定に失敗しました: ' + (data.error || 'エラー'));
+    return;
+  }
+  refresh();
+}
+
+async function resetOpen() {
+  const { ok, data } = await callAction('special_hours_delete', {
+    date: isoOfMid(new Date()),
+  });
+  if (!ok) {
+    alert('通常への復帰に失敗しました: ' + (data.error || 'エラー'));
+    return;
+  }
+  refresh();
+}
+
 /* ── イベント ── */
 document.addEventListener('click', (ev) => {
   const t = ev.target.closest(
@@ -744,6 +796,8 @@ $('menu-photo-input').addEventListener('change', (ev) => {
   if (f && photoTargetId) uploadMenuPhoto(photoTargetId, f);
   ev.target.value = '';
 });
+$('open-now-btn').addEventListener('click', openNow);
+$('open-reset-btn').addEventListener('click', resetOpen);
 $('sh-save-btn').addEventListener('click', saveSpecialHours);
 $('menu-save-btn').addEventListener('click', menuSave);
 $('menu-cancel-btn').addEventListener('click', menuEditReset);

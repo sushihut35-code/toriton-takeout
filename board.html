@@ -33,6 +33,15 @@
 </div>
 
 <section class="b-section">
+  <div class="push-panel">
+    <span class="holiday-label">🚀 早く開けた日はワンタップ(押した時刻が今日の開店になります・フォームの受取時刻が早まります):</span>
+    <button id="open-now-btn" class="c-btn c-btn--ok">今から開店</button>
+    <button id="open-reset-btn" class="c-btn" hidden>通常に戻す</button>
+    <span id="open-now-status" class="push-status"></span>
+  </div>
+</section>
+
+<section class="b-section">
   <details class="b-details" id="slots-details">
     <summary><span id="chips-date">受付時間帯</span></summary>
     <div class="slots-wrap">
@@ -152,6 +161,6 @@
 
 <script src="js/config.js?v=7"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/board.js?v=8"></script>
+<script src="js/board.js?v=9"></script>
 </body>
 </html>
