@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>鳥とん 電話をかける</title>
+<meta http-equiv="refresh" content="0; url=tel:07089537755">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    background: #f7efe2;
+    color: #2b2118;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    text-align: center;
+  }
+  .logo {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+  }
+  .sub {
+    font-size: 13px;
+    color: #8a7a66;
+    margin-top: 4px;
+  }
+  .call {
+    display: block;
+    margin-top: 28px;
+    padding: 22px 34px;
+    background: #d96c2c;
+    color: #fff;
+    font-size: 24px;
+    font-weight: 800;
+    text-decoration: none;
+    border-radius: 16px;
+    box-shadow: 0 4px 14px rgba(217, 108, 44, 0.35);
+  }
+  .call small {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 6px;
+    opacity: 0.9;
+  }
+  .note {
+    margin-top: 20px;
+    font-size: 13px;
+    color: #8a7a66;
+    line-height: 1.7;
+  }
+</style>
+</head>
+<body>
+  <div class="logo">炭火焼 鳥とん</div>
+  <div class="sub">お電話でのお問い合わせ</div>
+
+  <a class="call" href="tel:07089537755">
+    📞 070-8953-7755
+    <small>タップで電話がかかります</small>
+  </a>
+
+  <p class="note">
+    受付時間 15:00〜19:00<br>
+    ご注文はLINEの「注文する」からも承っております
+  </p>
+
+  <script>
+    // 自動発信を試みる(効かない環境では上のボタンを押してもらう)
+    setTimeout(function () {
+      location.href = 'tel:07089537755';
+    }, 400);
+  </script>
+</body>
+</html>
