@@ -96,6 +96,7 @@ async function menuText(): Promise<string> {
   return (
     "🍗 鳥とんのメニューです\n" +
     lines.join("\n") +
+    `\n\n📷 写真つきメニューはこちら\nhttps://sushihut35-code.github.io/toriton-takeout/menu.html` +
     `\n\nご注文は下の「注文する」からどうぞ♡\n(営業 ${HOURS}・注文は24時間受付)`
   );
 }
