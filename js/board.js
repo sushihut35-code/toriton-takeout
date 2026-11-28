@@ -633,7 +633,7 @@ function cardHtml(o) {
   if (o.status === 'new') {
     return `
     <div class="card card--new">
-      <div class="c-head"><span class="c-no">#${o.id}</span><span class="c-time-now">希望 ${dateSlotLabel(o.pickup_at)}</span></div>
+      <div class="c-head"><span class="c-no">#${o.id}</span><span class="c-ordered">受付 ${dateSlotLabel(o.created_at)}</span><span class="c-time-now">希望 ${dateSlotLabel(o.pickup_at)}</span></div>
       <div class="c-name">${esc(o.customer_name)}${tel}</div>
       <div class="c-items">${itemsHtml(o)}</div>
       <div class="c-total">${totalLabel(o)}</div>
@@ -647,7 +647,7 @@ function cardHtml(o) {
   // accepted
   return `
     <div class="card card--ok">
-      <div class="c-head"><span class="c-no">#${o.id}</span><span class="c-time-now">受取 ${dateSlotLabel(o.pickup_at)}</span></div>
+      <div class="c-head"><span class="c-no">#${o.id}</span><span class="c-ordered">受付 ${dateSlotLabel(o.pickup_at === o.created_at ? o.pickup_at : o.created_at)}</span><span class="c-time-now">受取 ${dateSlotLabel(o.pickup_at)}</span></div>
       <div class="c-name">${esc(o.customer_name)}${tel}</div>
       <div class="c-items">${itemsHtml(o)}</div>
       <div class="c-total">${totalLabel(o)}</div>

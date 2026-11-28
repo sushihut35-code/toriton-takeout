@@ -531,6 +531,11 @@ body {
   font-weight: 800;
   color: var(--accent);
 }
+.c-ordered {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sub);
+}
 .c-time-now {
   font-size: 15px;
   font-weight: 700;
