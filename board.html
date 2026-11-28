@@ -34,9 +34,15 @@
 
 <section class="b-section">
   <div class="push-panel">
-    <span class="holiday-label">🚀 早く開けた日はワンタップ(押した時刻が今日の開店になります・フォームの受取時刻が早まります):</span>
+    <span class="holiday-label">🚀 早く開けた日・閉店を延ばす日はワンタップ(押した時刻が今日の開店になります。閉店は右で選択):</span>
+    <select id="open-now-close" class="c-time">
+      <option value="19:00" selected>〜19:00(通常)</option>
+      <option value="19:30">〜19:30</option>
+      <option value="20:00">〜20:00</option>
+      <option value="20:30">〜20:30</option>
+      <option value="21:00">〜21:00</option>
+    </select>
     <button id="open-now-btn" class="c-btn c-btn--ok">今から開店</button>
-    <button id="open-reset-btn" class="c-btn" hidden>通常に戻す</button>
     <span id="open-now-status" class="push-status"></span>
   </div>
 </section>
@@ -161,6 +167,6 @@
 
 <script src="js/config.js?v=7"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/board.js?v=9"></script>
+<script src="js/board.js?v=10"></script>
 </body>
 </html>

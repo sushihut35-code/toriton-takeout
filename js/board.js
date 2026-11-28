@@ -715,18 +715,14 @@ async function toggleSlot(iso) {
   refresh();
 }
 
-/* ── 🚀 今から開店(押した時刻で今日の開店時刻を登録・フォームに即反映) ── */
+/* ── 🚀 今から開店(押した時刻で今日の開店時刻を登録・フォームに即反映。
+     その日限りで翌日は自動的に通常営業に戻るため戻すボタンは無し。
+     今日の閉店は横のセレクトで選ぶ=延長営業も同じボタンで) ── */
 function renderOpenNow() {
   const s = specialHours.get(isoOfMid(new Date()));
-  const status = $('open-now-status');
-  const resetBtn = $('open-reset-btn');
-  if (s) {
-    status.textContent = `今日: ${s.open}〜${s.close} で受付中`;
-    resetBtn.hidden = false;
-  } else {
-    status.textContent = `通常: ${CONFIG.OPEN_TIME}〜${CONFIG.CLOSE_TIME}`;
-    resetBtn.hidden = true;
-  }
+  $('open-now-status').textContent = s
+    ? `今日: ${s.open}〜${s.close} で受付中`
+    : `通常: ${CONFIG.OPEN_TIME}〜${CONFIG.CLOSE_TIME}`;
 }
 
 async function openNow() {
@@ -734,8 +730,9 @@ async function openNow() {
   const open =
     String(now.getHours()).padStart(2, '0') + ':' +
     String(now.getMinutes()).padStart(2, '0');
-  if (open >= CONFIG.CLOSE_TIME) {
-    alert(`通常の閉店時刻(${CONFIG.CLOSE_TIME})を過ぎています`);
+  const close = $('open-now-close').value || CONFIG.CLOSE_TIME;
+  if (open >= close) {
+    alert(`閉店時刻(${close})を過ぎています`);
     return;
   }
   const btn = $('open-now-btn');
@@ -744,23 +741,12 @@ async function openNow() {
   const { ok, data } = await callAction('special_hours_save', {
     date: isoOfMid(now),
     open_time: open,
-    close_time: CONFIG.CLOSE_TIME,
+    close_time: close,
   });
   btn.disabled = false;
   btn.textContent = '今から開店';
   if (!ok) {
     alert('開店設定に失敗しました: ' + (data.error || 'エラー'));
-    return;
-  }
-  refresh();
-}
-
-async function resetOpen() {
-  const { ok, data } = await callAction('special_hours_delete', {
-    date: isoOfMid(new Date()),
-  });
-  if (!ok) {
-    alert('通常への復帰に失敗しました: ' + (data.error || 'エラー'));
     return;
   }
   refresh();
@@ -797,7 +783,6 @@ $('menu-photo-input').addEventListener('change', (ev) => {
   ev.target.value = '';
 });
 $('open-now-btn').addEventListener('click', openNow);
-$('open-reset-btn').addEventListener('click', resetOpen);
 $('sh-save-btn').addEventListener('click', saveSpecialHours);
 $('menu-save-btn').addEventListener('click', menuSave);
 $('menu-cancel-btn').addEventListener('click', menuEditReset);
