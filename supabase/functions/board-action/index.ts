@@ -587,6 +587,39 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
+    // ── レジ:会計の記録 ──
+    case "sale_record": {
+      const items = Array.isArray(payload.items) ? payload.items : [];
+      const total = Number(payload.total);
+      const payment = Number(payload.payment);
+      if (items.length === 0 || !Number.isInteger(total) || total < 0) {
+        return json({ error: "bad payload" }, 400);
+      }
+      const { error } = await db.from("sales_log").insert({
+        items,
+        total,
+        payment: Number.isInteger(payment) && payment > 0 ? payment : null,
+      });
+      if (error) return json({ error: error.message }, 500);
+      return json({ ok: true });
+    }
+
+    // ── レジ:本日の売上サマリ ──
+    case "sales_today": {
+      const today = String(payload.today ?? "");
+      if (!/^\d{4}-\d{2}-\d{2}T/.test(today)) {
+        return json({ error: "bad payload" }, 400);
+      }
+      const { data, error } = await db
+        .from("sales_log")
+        .select("total")
+        .gte("created_at", today);
+      if (error) return json({ error: error.message }, 500);
+      const rows = data ?? [];
+      const sum = rows.reduce((a, r) => a + Number(r.total || 0), 0);
+      return json({ ok: true, count: rows.length, total: sum });
+    }
+
     // 時間帯ストップ解除
     case "slot_resume": {
       const slotAt = new Date(payload.slot_at);

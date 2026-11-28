@@ -1,0 +1,287 @@
+/* 鳥とん レジ:ボードと同系統の夜色・指で押しやすい大きさ */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #17130f;
+  --panel: #241d17;
+  --panel-2: #2e2620;
+  --line: #3d332a;
+  --text: #f3e9dc;
+  --sub: #a6967f;
+  --accent: #d96c2c;
+  --ok: #6fbf73;
+}
+html, body { height: 100%; }
+body {
+  font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  padding-bottom: 84px; /* 合計バーのぶん */
+}
+
+/* ── ヘッダー ── */
+.r-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--panel);
+  border-bottom: 2px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.r-title { font-size: 18px; font-weight: 800; }
+.r-sales { font-size: 13px; color: var(--sub); }
+.r-sales b { color: var(--text); font-size: 16px; }
+
+/* ── カート ── */
+.r-cart {
+  max-height: 30vh;
+  overflow-y: auto;
+  padding: 8px 16px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line);
+}
+.r-cart__empty {
+  color: var(--sub);
+  font-size: 13px;
+  text-align: center;
+  padding: 10px 0;
+}
+.r-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px dashed var(--line);
+  font-size: 14px;
+}
+.r-row:last-child { border-bottom: none; }
+.r-row__name { flex: 1; font-weight: 700; }
+.r-row__qty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.r-row__qty button {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 18px;
+  cursor: pointer;
+}
+.r-row__sum { width: 76px; text-align: right; font-weight: 700; }
+
+/* ── 合計バー ── */
+.r-total-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+  background: var(--panel);
+  border-top: 2px solid var(--line);
+  z-index: 20;
+}
+.r-total { flex: 1; font-size: 15px; }
+.r-total b { font-size: 26px; color: var(--accent); }
+
+.r-btn-main {
+  border: none;
+  border-radius: 12px;
+  padding: 14px 22px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.r-btn-main:disabled { opacity: 0.35; cursor: default; }
+.r-btn-sub {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 14px;
+  background: var(--panel-2);
+  color: var(--sub);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ── 商品グリッド ── */
+.r-menu {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  padding: 14px 16px;
+}
+.r-item {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  overflow: hidden;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
+  padding: 0;
+  position: relative;
+}
+.r-item:active { background: var(--panel-2); }
+.r-item__photo {
+  width: 100%;
+  aspect-ratio: 4/3;
+  object-fit: cover;
+  display: block;
+  background: var(--panel-2);
+}
+.r-item__body { padding: 8px 10px 10px; }
+.r-item__name {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+  min-height: 2.6em;
+}
+.r-item__price { font-size: 15px; font-weight: 800; color: var(--accent); margin-top: 4px; }
+.r-item__badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+.r-cat {
+  grid-column: 1 / -1;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--sub);
+  margin-top: 6px;
+}
+
+/* ── お会計モーダル ── */
+.r-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 16px;
+}
+.r-pay {
+  width: 100%;
+  max-width: 420px;
+  background: var(--panel);
+  border: 2px solid var(--line);
+  border-radius: 16px;
+  padding: 18px;
+}
+.r-pay__title { font-size: 17px; font-weight: 800; text-align: center; }
+.r-pay__total { text-align: center; font-size: 14px; margin: 10px 0 14px; }
+.r-pay__total b { font-size: 30px; color: var(--accent); }
+.r-quick {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.r-quick button {
+  padding: 12px 4px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.r-quick button:active { background: var(--accent); color: #fff; }
+.r-pay__label {
+  display: block;
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--sub);
+}
+.r-pay__label input {
+  width: 100%;
+  margin-top: 6px;
+  padding: 12px;
+  font-size: 20px;
+  font-weight: 800;
+  text-align: right;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+}
+.r-change {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 14px;
+}
+.r-change b { font-size: 28px; color: var(--ok); }
+.r-pay__btns {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+.r-pay__btns .r-btn-main { flex: 2; }
+.r-pay__btns .r-btn-sub { flex: 1; }
+
+/* ── 完了トースト ── */
+.r-toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ok);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 22px;
+  border-radius: 999px;
+  z-index: 60;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* ── ロック ── */
+.r-lock {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.r-lock__box {
+  width: min(90vw, 340px);
+  text-align: center;
+  background: var(--panel);
+  border: 2px solid var(--line);
+  border-radius: 16px;
+  padding: 24px;
+}
+.r-lock__title { font-size: 20px; font-weight: 800; margin-bottom: 14px; }
+.r-lock input {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  text-align: center;
+}
+.r-lock .r-btn-main { width: 100%; margin-top: 10px; }
+.r-lock__hint { font-size: 12px; color: var(--sub); margin-top: 10px; }

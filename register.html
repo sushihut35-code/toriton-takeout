@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>鳥とん レジ</title>
+<link rel="stylesheet" href="css/register.css?v=1">
+</head>
+<body>
+<header class="r-header">
+  <div class="r-title">🧾 鳥とん レジ</div>
+  <div class="r-sales">本日 <b id="sales-total">¥0</b> <span id="sales-count">(0件)</span></div>
+</header>
+
+<!-- カート(今の会計内容) -->
+<section class="r-cart" id="r-cart">
+  <div class="r-cart__empty" id="cart-empty">↓ 商品をタップすると入ります</div>
+</section>
+
+<!-- 合計バー(常時下部) -->
+<div class="r-total-bar">
+  <button id="clear-btn" class="r-btn-sub">クリア</button>
+  <div class="r-total">合計 <b id="r-total">¥0</b></div>
+  <button id="checkout-btn" class="r-btn-main" disabled>お会計</button>
+</div>
+
+<!-- 商品グリッド -->
+<main class="r-menu" id="r-menu">読み込み中…</main>
+
+<!-- お会計モーダル -->
+<div id="pay-overlay" class="r-overlay" hidden>
+  <div class="r-pay">
+    <div class="r-pay__title">🧾 お会計</div>
+    <div class="r-pay__total">ご請求額 <b id="pay-total">¥0</b></div>
+    <div class="r-quick">
+      <button data-pay="exact">ちょうど</button>
+      <button data-pay="500">¥500</button>
+      <button data-pay="1000">¥1,000</button>
+      <button data-pay="5000">¥5,000</button>
+      <button data-pay="10000">¥10,000</button>
+    </div>
+    <label class="r-pay__label">お預かり金額
+      <input id="pay-input" type="number" inputmode="numeric" placeholder="例: 5000">
+    </label>
+    <div class="r-change" id="pay-change-wrap">お釣り <b id="pay-change">¥0</b></div>
+    <div class="r-pay__btns">
+      <button id="pay-cancel" class="r-btn-sub">戻る</button>
+      <button id="pay-done" class="r-btn-main" disabled>会計を確定する</button>
+    </div>
+  </div>
+</div>
+
+<!-- 会計完了のひとこと -->
+<div id="done-toast" class="r-toast" hidden>✓ 会計完了 — お釣り <b id="done-change">¥0</b></div>
+
+<!-- 合言葉ロック(初回のみ・ボードと同じ合言葉) -->
+<div id="lock" class="r-lock" hidden>
+  <div class="r-lock__box">
+    <div class="r-lock__title">🔒 鳥とん レジ</div>
+    <input id="pw-input" type="password" placeholder="ボードと同じパスワード">
+    <button id="unlock-btn" class="r-btn-main">開く</button>
+    <p class="r-lock__hint">受注ボードと同じ合言葉です</p>
+  </div>
+</div>
+
+<script src="js/config.js?v=8"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/register.js?v=1"></script>
+</body>
+</html>
