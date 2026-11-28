@@ -1,7 +1,7 @@
 // 鳥とん LINE自動応答 Webhook
 // 役割: お客がトークで送ったメッセージを判定して、自動で返す
-//   ・「メニュー」等      → 最新メニューを応答(DBのmenu_itemsから生成=常に最新)
-//   ・「定休日/営業」等   → 休みと営業時間を応答(ボード設定と自動同期)
+//   ・「メニュー」等      → メニューページ(写真つき・DBと同期)へ誘導
+//   ・「定休日/営業」等   → 営業カレンダーページ(ボード設定と同期)へ誘導
 //   ・注文控え(LIFF自動送信) → 無視(二重返信防止)
 //   ・その他              → 電話でのご案内を応答
 //
@@ -9,14 +9,11 @@
 //   LINE_CHANNEL_ACCESS_TOKEN  Messaging APIのチャネルアクセストークン(長期)
 //   LINE_CHANNEL_SECRET        チャネルシークレット(なりすまし防止の検証に使用)
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
 const TOKEN = Deno.env.get("LINE_CHANNEL_ACCESS_TOKEN") ?? "";
 const CHANNEL_SECRET = Deno.env.get("LINE_CHANNEL_SECRET") ?? "";
 
 const PHONE = "070-8953-7755";
 const HOURS = "15:00〜19:00";
-const WEEKDAY = ["日", "月", "火", "水", "木", "金", "土"];
 
 const CORS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -74,29 +71,14 @@ async function menuText(): Promise<string> {
   );
 }
 
-// ── 定休日・営業時間の文章生成(ボード設定と自動同期) ──
+// ── 定休日・営業時間の応答(カレンダーページへ誘導。ページがボード設定と同期=常に最新) ──
 async function holidayText(): Promise<string> {
-  const db = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  return (
+    `⏰ 営業時間 ${HOURS}\n` +
+    "📅 定休日・営業カレンダーはこちら\n" +
+    "https://sushihut35-code.github.io/toriton-takeout/calendar.html\n\n" +
+    "ご注文は24時間受け付けております♡"
   );
-  const { data } = await db
-    .from("shop_holidays")
-    .select("kind,day_of_week,holiday_date");
-  const weekly = (data ?? [])
-    .filter((r: any) => r.kind === "weekly" && r.day_of_week != null)
-    .map((r: any) => WEEKDAY[Number(r.day_of_week)])
-    .join("・");
-  const dates = (data ?? [])
-    .filter((r: any) => r.kind === "date" && r.holiday_date)
-    .map((r: any) => String(r.holiday_date))
-    .sort();
-
-  let t = `⏰ 営業時間 ${HOURS}\nご注文は24時間いつでも受け付けております`;
-  if (weekly) t += `\n🗓 毎週の定休日: ${weekly}曜日`;
-  if (dates.length > 0) t += `\n🌪 臨時休業: ${dates.join("・")}`;
-  t += `\n\n📅 営業カレンダーはこちら\nhttps://sushihut35-code.github.io/toriton-takeout/calendar.html`;
-  return t;
 }
 
 const FALLBACK =
