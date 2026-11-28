@@ -65,39 +65,12 @@ async function replyMessage(replyToken: string, text: string) {
   }
 }
 
-// ── 最新メニューの文章生成(DBのmenu_itemsから) ──
+// ── メニューの応答(写真つきページへ誘導。ページがDBと同期=常に最新) ──
 async function menuText(): Promise<string> {
-  const db = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-  );
-  const { data } = await db
-    .from("menu_items")
-    .select("category,name,price,options")
-    .eq("available", true)
-    .order("sort_no");
-  if (!data || data.length === 0) {
-    return "ただいまメニューの準備をしております。しばらくお待ちください。";
-  }
-  const lines: string[] = [];
-  let cat = "";
-  for (const m of data) {
-    if (m.category !== cat) {
-      cat = m.category;
-      lines.push(`【${cat}】`);
-    }
-    const opts = Array.isArray(m.options) && m.options.length > 0
-      ? "(+" +
-        m.options.map((o: any) => `${o.name}¥${Number(o.price)}`).join("/") +
-        ")"
-      : "";
-    lines.push(`・${m.name} ¥${Number(m.price).toLocaleString()}${opts}`);
-  }
   return (
-    "🍗 鳥とんのメニューです\n" +
-    lines.join("\n") +
-    `\n\n📷 写真つきメニューはこちら\nhttps://sushihut35-code.github.io/toriton-takeout/menu.html` +
-    `\n\nご注文は下の「注文する」からどうぞ♡\n(営業 ${HOURS}・注文は24時間受付)`
+    "🍗 メニューはこちらからご覧ください\n" +
+    "https://sushihut35-code.github.io/toriton-takeout/menu.html\n\n" +
+    `ご注文は下の「注文する」からどうぞ♡\n(営業 ${HOURS}・注文は24時間受付)`
   );
 }
 
