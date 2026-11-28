@@ -121,7 +121,7 @@ async function holidayText(): Promise<string> {
   let t = `⏰ 営業時間 ${HOURS}\nご注文は24時間いつでも受け付けております`;
   if (weekly) t += `\n🗓 毎週の定休日: ${weekly}曜日`;
   if (dates.length > 0) t += `\n🌪 臨時休業: ${dates.join("・")}`;
-  t += `\n\n営業カレンダーもご確認ください`;
+  t += `\n\n📅 営業カレンダーはこちら\nhttps://sushihut35-code.github.io/toriton-takeout/calendar.html`;
   return t;
 }
 
