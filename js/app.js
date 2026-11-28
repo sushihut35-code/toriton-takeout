@@ -477,6 +477,14 @@ function closeCart() {
 async function submitOrder() {
   if (cart.size === 0) return;
 
+  // 混雑時の時間調整へのお同意確認
+  if (!$('agree-time') || !$('agree-time').checked) {
+    alert(
+      'ご注文の前に、受取時間が前後する場合がある旨の同意チェックをお願いいたします'
+    );
+    return;
+  }
+
   // 電話番号チェック(ハイフン・空白は除いて9〜15桁)
   const phoneDigits = ($('phone-input').value || '').replace(/[\s\-()]/g, '');
   if (!/^\d{9,15}$/.test(phoneDigits)) {

@@ -366,6 +366,23 @@ body {
   line-height: 1.5;
 }
 
+/* ── 時間調整へのお同意 ── */
+.consent {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-top: 14px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+.consent input {
+  width: auto;
+  flex: none;
+  margin-top: 2px;
+  accent-color: #d96c2c;
+}
+
 /* ── 合計・ボタン ── */
 .sheet__total {
   display: flex;
