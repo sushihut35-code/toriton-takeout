@@ -115,7 +115,8 @@ async function initLiff() {
     // file:// や未登録のドメインで開いた場合 → 確認用プレビューモード
     showBanner('プレビューモード — LINE内で開くと正式表示になります');
   }
-  $('name-input').value = profile.displayName || '';
+  // LINE表示名の自動入力はしない(受取時に名乗る本名の入力を促すため)
+  // 2回目以降は prefillCustomerInfo が前回の本名を入れてくれる
 }
 
 function showBanner(text) {
@@ -485,6 +486,13 @@ async function submitOrder() {
     return;
   }
 
+  // お名前(本名)の入力確認
+  const customerName = $('name-input').value.trim();
+  if (!customerName) {
+    alert('受取時にお伝えするお名前（本名）をご入力ください');
+    return;
+  }
+
   // 電話番号チェック(ハイフン・空白は除いて9〜15桁)
   const phoneDigits = ($('phone-input').value || '').replace(/[\s\-()]/g, '');
   if (!/^\d{9,15}$/.test(phoneDigits)) {
@@ -520,7 +528,7 @@ async function submitOrder() {
 
     const order = {
       line_user_id: profile.userId || '',
-      customer_name: $('name-input').value.trim() || '名前なし',
+      customer_name: customerName,
       phone: $('phone-input').value.trim() || null,
       pickup_at: new Date($('pickup-select').value).toISOString(),
       items,
